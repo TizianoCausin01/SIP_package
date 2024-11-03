@@ -1,0 +1,14 @@
+$ git init / git status / git log / git diff --color-words name_file1 name_file2   # self explanatory
+
+$ git commit -m "useful caption for retrieving the commit"  # keeps track of the staged changes
+
+$ git add file_name(s) # every time you make a change in your files, if you haven't done it yet, you have first to add them to the stage, i.e. the pool of files that will eventually be committed
+
+- use HEAD to refer to the current commit, HEAD~n to refer to the nth-to-last commit or alternatively use the first 7 characters of its name
+ 
+$ git restore file_name # restores the older version of file_name, unless you haven't already added file_name to the stage. In that case first use:
+$ git restore --staged file_name # unstages file_name and then you can run the previous command
+
+$ git restore -s <commit ID> file_name # recovers file_name of <commit ID> 
+
+$ git revert <commit ID> # creates a new commit that undoes <commit ID>
