@@ -1,5 +1,6 @@
 function video_conversion(file_name)
-"""reads and converts the video"""
+"""reads and converts the video starting from the file name
+uses color2BW and get_dimensions as functions"""
 
     # loads and opens the video
     # video_load = VideoIO.load(file_name) # to add if you will convert directly the videos from the internet
@@ -14,9 +15,9 @@ function video_conversion(file_name)
     while !eof(reader) # it loops until the last frame has been read
         count += 1 # updates the count
         frame = VideoIO.read(reader)  # reads the movie
-        BW_vid[:,:,count] = color2BW(frame) 
+        BW_vid[:,:,count] = color2BW(frame) # assigns the binarized frame to the array
     end # while 
-    close(reader)
+    close(reader) # closes the reader
     # bit_vid = BitArray(BW_vid) # converts the bool vid into a BitArray for optimization
     return BW_vid
 end # EOF
