@@ -11,15 +11,21 @@ using HDF5
 using ImageView
 
 ## including functions
-using HDF5
 ##
 # for the preprocessing
 include("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_code/scripts/video_conversion.jl")
 include("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_code/scripts/color2BW.jl")
 include("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_code/scripts/get_dimensions.jl")
+
+# for coarse graining
+include("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_code/scripts/get_new_dimensions.jl")
+include("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_code/scripts/get_cutoff.jl")
+include("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_code/scripts/compute_steps_glider.jl")
+include("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_code/scripts/glider_coarse_g.jl")
+include("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_code/scripts/majority_rule.jl")
+
 # for sampling
 include("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_code/scripts/update_count.jl")
-include("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_code/scripts/compute_steps_glider.jl")
 include("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_code/scripts/glider.jl")
 include("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_code/scripts/function get_nth_window.jl")
 #file_name = "/Users/tizianocausin/Desktop/backUp20240609/summer2024/dondersInternship/images_for_presentation/Moviesnippet_quick.mp4"
@@ -36,8 +42,21 @@ bin_file = "$bin_dir/$file_name.h5"
 glider_dim = (2, 2, 1) # rows, cols, depth
 
 ## video conversion and storing
-vid_bool = video_conversion(file_path) # converts a target yt video into a binarized one
-h5write(bin_file, "test_nature", vid_bool) # saves the video (complete_file_path, name_of_variable_when_retrieved, current variable name)
+bin_vid = video_conversion(file_path) # converts a target yt video into a binarized one
+h5write(bin_file, "test_nature", bin_vid) # saves the video (complete_file_path, name_of_variable_when_retrieved, current variable name)
+
+## coarse graining
+# variable assignment
+video_dim = size(bin_vid) # rows, cols, depth
+glider_coarse_g_dim = (3,3,1) # rows, cols, depth
+new_dim = get_new_dimensions(video_dim, glider_coarse_g_dim)
+new_vid = zeros(Bool,new_dim) # preallocation
+tot_steps = compute_steps_glider(glider_coarse_g_dim, video_dim)
+cutoff = get_cutoff(glider_coarse_g_dim)
+
+# glider coarse graining
+new_vid = glider_coarse_g(bin_vid, tot_steps, glider_coarse_g_dim, cutoff)
+h5write(new_path, "test_nature", new_vid) # saves the video (complete_file_path, name_of_variable_when_retrieved, current variable name)
 
 ## sampling patches
 # loads the file
@@ -50,7 +69,7 @@ tot_steps = compute_steps_glider(glider_dim, video_dim) # creates a tuple with t
 # creates the counts_dict and populates it with the glider
 counts = glider(bin_vid, glider_dim, tot_steps)
 sorted_counts = sort(collect(counts), by=x -> x[2], rev=true) # sorts the counts dictionary by values (by=x -> x[2]) in reverse order. To achieve this, it converts the dict in a Vector{Pair{Vector{Bool}, Int64}} in the first place 
-##
+## for visualization
 window, count = get_nth_window(4, sorted_counts,glider_dim)
 imshow(window)
 ##
