@@ -7,7 +7,8 @@ uses color2BW and get_dimensions as functions"""
     reader = VideoIO.openvideo(file_name)
     # stores quantities for preallocation
     frame_1, height, width, frame_num = get_dimensions(reader) # reads the first frame to get the dimensions of the movie and returns what you see in variable assignment
-    BW_vid = zeros(Bool, height, width, frame_num) # preallocates a boolean matrix of zeros, s.t. we then substitute ones where gray_frame > gray_median is true 
+    BW_vid = BitArray(undef, height, width, frame_num) # preallocates a boolean matrix of zeros, s.t. we then substitute ones where gray_frame > gray_median is true 
+    fill!(BW_vid,false)
     #BW_vid = BitArray(BW_vid_bool);
     count = 1 # index for later storing frames, starts from one because we already read the first frame
     BW_vid[:,:,count] = color2BW(frame_1) # special treatment for frame_1 because we have already read it
