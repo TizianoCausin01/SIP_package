@@ -53,6 +53,11 @@ include("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_code/s
 include("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_code/scripts/compute_steps_glider.jl")
 include("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_code/scripts/glider.jl")
 include("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_code/scripts/function get_nth_window.jl")
+
+# for local maxima evaluation
+include("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_code/scripts/flip_element.jl")
+include("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_code/scripts/del_wins.jl")
+include("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_code/scripts/get_loc_max.jl")
 end
 
 # ╔═╡ 5fd55fbc-54a1-482c-9da7-0205508db611
@@ -162,6 +167,50 @@ window, count = get_nth_window(patch_index, tot_sorted_counts[iteration_idx], gl
 # ╔═╡ 6dd95fb1-1d25-46c9-a6fc-deaf5a2ff4c5
 window[:,:,time_idx], count
 
+# ╔═╡ 340bcbb1-dc45-4d87-a260-7a28134683d2
+md"### Local maxima computation"
+
+# ╔═╡ 91a20253-4b5a-4959-8ed8-e583fa332c79
+begin
+myDict = copy(tot_counts[iteration_idx])
+local_maxima = get_loc_max(myDict)
+end
+
+# ╔═╡ 81485f42-a13a-4a7a-8dc5-8a3118772e79
+@bind max_idx Slider(1:size(local_maxima,1), show_value=true, default=1)
+
+# ╔═╡ e0bebc62-3621-4893-9c64-fb119240572a
+@bind time_idx_max Slider(1:size(window,3), show_value=true, default=1)
+
+# ╔═╡ 918917e4-f465-486a-b763-f98a0b646599
+begin
+win_max = reshape(local_maxima[max_idx], glider_dim) 
+Gray.(win_max[:,:,time_idx_max])
+end
+
+# ╔═╡ e4a72178-fb5f-45ae-932c-f8c07de0919e
+function delete_wins(myVector, win)
+    for position = 1 : length(win) # changes one element at the time
+       win = flip_element(win, position) # flips the window
+       if win in myVector
+           filter!(x -> x != win, myVector)
+       end
+       win = flip_element(win, position) # returns the initial win (it was less expensive than copying the key)
+    end 
+end
+
+# ╔═╡ 8961e927-ed91-4aff-9a78-743b5dfa93ee
+begin
+llocal = copy(local_maxima)
+	counter=0
+while ~isempty(llocal)
+    wwin = llocal[1]
+	delete_wins(llocal, wwin)
+	counter+=1
+end
+	counter
+end
+
 # ╔═╡ Cell order:
 # ╠═dca45676-0482-4d43-956c-365f91120a6e
 # ╠═b87e7088-8b5b-4e38-b325-ff63a6c2a8f3
@@ -187,3 +236,10 @@ window[:,:,time_idx], count
 # ╠═4421c859-d0cd-4acc-9a9a-0efe59c58b7b
 # ╠═5b543ce9-fdf5-41c5-8da3-16ad06ce560b
 # ╠═6dd95fb1-1d25-46c9-a6fc-deaf5a2ff4c5
+# ╟─340bcbb1-dc45-4d87-a260-7a28134683d2
+# ╠═91a20253-4b5a-4959-8ed8-e583fa332c79
+# ╠═81485f42-a13a-4a7a-8dc5-8a3118772e79
+# ╠═e0bebc62-3621-4893-9c64-fb119240572a
+# ╠═918917e4-f465-486a-b763-f98a0b646599
+# ╠═e4a72178-fb5f-45ae-932c-f8c07de0919e
+# ╠═8961e927-ed91-4aff-9a78-743b5dfa93ee
