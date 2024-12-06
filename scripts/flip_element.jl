@@ -10,11 +10,6 @@ Inputs :
 output :
 - win -> the modified window
 """
-
-    if win[position] == 1
-        win[position] = 0
-    elseif win[position] == 0
-        win[position] = 1
-    end # end if
+    win[position] = 1 - win[position] # flips the value
     return win
 end # EOF
