@@ -5,11 +5,14 @@ module SIP_package
 # =========================
 
 export split_vid,
+       video_conversion,
        get_new_dimensions,
        get_cutoff,
+       compute_steps_glider,
        glider_coarse_g,
        glider,
-       get_nth_window
+       get_nth_window,
+       get_loc_max
 
 # =========================
 # IMPORTED PACKAGES
@@ -306,6 +309,42 @@ end # EOF
 
 
 """
+get_loc_max
+Given a dictionary with the corresponding counts of the sampled windows, 
+it returns the local max, i.e. those windows that, if you flip one (only one)
+pixel (in any of the positions), the probability won't increase.
+Details about the algorithm: 
+- sorts the dict converting it into sorted_counts::Vector{Pair{BitVector, Int}}
+- for each key in sorted_counts
+    - flip any element in the key separately
+    - see if the frequency increases
+    - if so, stop comparing
+- add if it didn't stop before
+
+input:
+- myDict -> Dict{BitVector, Int}, a dictionary with the frequency of sampled windows
+- percentile -> Int, the percentile of top wins to consider in the maximum
+
+output:
+- loc_max -> Array{Vector{BitVector}} with the local maxima in order of frequency
+
+Dict{BitVector, Int}
+"""
+function get_loc_max(myDict, percentile)
+    loc_max = Vector{BitVector}(undef,0) # initializes as a vector of BitVectors
+    sorted_counts = sort(collect(myDict), by = x->x[2], rev=true) # sorts the dictionary of counts according to the values and converts it into a Vector{Pair{}}
+    top_nth = Int(round(2^length(sorted_counts[1].first) * percentile/100)) # computes the top nth elements
+    for element in Iterators.take(sorted_counts, top_nth) # loops through the top nth-elements
+        win = element.first # extracts the key
+        max = is_max(myDict, win) # inspects if it's a max
+        if ~(max===nothing) # if max exists, updates loc_max
+            push!(loc_max, max)
+        end # if max exists
+    end # for every element
+    return loc_max # returns the loc_max
+end # EOF
+
+"""
 is_max
 Flips the target "win" to see if there is one with higher frequency,
 if there is it returns nothing, if there isn't we have found a local maximum
@@ -319,54 +358,21 @@ Output:
 - if it's not : nothing
 """
 function is_max(myDict, win)
-win_freq = myDict[win]
+    win_freq = get(myDict, win, -1) # if the key doesn't exit, assign -1
     for position = 1 : length(win) # changes one element at the time
-        win = flip_element(win, position) # flips the window element in "position" 
-        if haskey(myDict, win) &&  myDict[win] > win_freq # new win might have been not present 
-            return nothing # don't include win in local maxima if it breaks the loop (counter<length(win))
-        end # if haskey & win_flipped > win
-        win = flip_element(win, position) # flips the element again
+        flipped_win = flip_element(win, position) # flips the window element in "position" 
+        if get(myDict, flipped_win, 0) > win_freq # new win might have been not present, that's why we use get 
+              return nothing # don't include win in local maxima if it breaks the loop (counter<length(win))
+        end # if get(myDict, win, 0) > win_freq
     end # for position 
     return win # only if it is a local max
 end # EOF
 
 
 """
-get_loc_max
-Given a dictionary with the corresponding counts of the sampled windows, 
-it returns the local max, i.e. those windows that, if you flip one (only one)
-pixel (in any of the positions), the probability won't increase.
-Details about the algorithm: 
-- for each key in the dict
-    - flip any element in the key separately
-    - see if the frequency increases
-    - if so, stop comparing
-    - otherwise add
-
-input:
-- myDict -> Dict{BitVector, Int}, a dictionary with the frequency of sampled windows
-
-output:
-- loc_max -> Array{Vector{Bool}} with the local maxima in order of frequency
-
-Dict{BitVector, Int}
-"""
-function get_loc_max(myDict)
-    loc_max = Array{Vector{Bool}}(undef,0) # initializes as a Bool because you can't expand BitArray
-    for element in myDict # loops through every element
-        win = element.first # extracts the key
-        max = is_max(myDict, win) # inspects if it's a max
-        if ~(max===nothing) # if max exists, updates loc_max
-            push!(loc_max, max)
-        end # if max exists
-    end # for every element
-return loc_max # returns the loc_max
-end # EOF
-
-"""
 flip_element
 Takes a vectorized win of pixels and flips the element 
-in the target position. It should modify the input win.
+in the target position by negating it. It doesn't modify the input win.
 Used for computing the local maxima of PMFs
 Inputs :
 - win -> the vectorized window of pixels
@@ -375,9 +381,10 @@ Inputs :
 output :
 - win -> the modified window
 """
-function flip_element(win, position)
-    win[position] = 1 - win[position] # flips the value
-    return win
+function flip_element(win::BitVector, position::Int)
+    flipped_win = copy(win) # creates a copy to not mutate the win
+    flipped_win[position] = ~flipped_win[position]  # flips the value by negating it
+    return flipped_win
 end # EOF
 
 end # module SIP_package
