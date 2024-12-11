@@ -274,11 +274,7 @@ present, it adds 1 to the value (to count it), otherwise it creates it
 and initializes its value with a 1
 """    
 function update_count(counts_dict, window)
-    if haskey(counts_dict, window)
-        counts_dict[window]+=1
-    else
-        counts_dict[window] = 1
-    end # if has key 
+    counts_dict[window] = get!(counts_dict, window, 0) + 1
     return counts_dict
 end #EOF
 
