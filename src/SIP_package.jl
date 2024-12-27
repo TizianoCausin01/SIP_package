@@ -175,7 +175,7 @@ Inputs :
 
 Outputs : 
 - new_vid -> the new coarse-grained video
-	"""
+"""
 function glider_coarse_g(bin_vid, new_vid, tot_steps, glider_coarse_g_dim, cutoff)
 	counter_new_mat = [0, 0, 0] # rows, cols, depth initializes a new counter for indexing in the new matrix
 	for i_time ∈ tot_steps[3]
@@ -195,7 +195,6 @@ function glider_coarse_g(bin_vid, new_vid, tot_steps, glider_coarse_g_dim, cutof
 		end # rows
 	end # time
 	return new_vid
-
 end # EOF
 
 
@@ -325,7 +324,7 @@ input:
 - percentile -> Int, the percentile of top wins to consider in the maximum
 
 output:
-- loc_max -> Array{Vector{BitVector}} with the local maxima in order of frequency
+- loc_max -> Vector{BitVector} with the local maxima in order of frequency
 
 Dict{BitVector, Int}
 """

@@ -1,17 +1,19 @@
 ### A Pluto.jl notebook ###
-# v0.19.46
+# v0.20.4
 
 using Markdown
 using InteractiveUtils
 
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
+    #! format: off
     quote
         local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
         local el = $(esc(element))
         global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
         el
     end
+    #! format: on
 end
 
 # ╔═╡ dca45676-0482-4d43-956c-365f91120a6e
@@ -22,43 +24,25 @@ cd("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_code/")
 Pkg.activate("SIP")
 end
 
-# ╔═╡ b87e7088-8b5b-4e38-b325-ff63a6c2a8f3
-begin
-## imports useful packages
-using Images
-using VideoIO
-using Statistics
-using HDF5
-using ImageView
-using PlutoUI
-end
-
 # ╔═╡ 485f8408-93b0-4dcc-9514-76f08f2f705a
 begin
-## including functions
-##
-# for the preprocessing
-include("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_code/scripts/video_conversion.jl")
-include("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_code/scripts/color2BW.jl")
-include("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_code/scripts/get_dimensions.jl")
-
-# for coarse graining
-include("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_code/scripts/get_new_dimensions.jl")
-include("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_code/scripts/majority_rule.jl")
-include("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_code/scripts/get_cutoff.jl")
-include("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_code/scripts/glider_coarse_g.jl")
-
-# for sampling
-include("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_code/scripts/update_count.jl")
-include("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_code/scripts/compute_steps_glider.jl")
-include("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_code/scripts/glider.jl")
-include("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_code/scripts/function get_nth_window.jl")
-
-# for local maxima evaluation
-include("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_code/scripts/flip_element.jl")
-include("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_code/scripts/is_max.jl")
-include("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_code/scripts/get_loc_max.jl")
+	Pkg.develop(path="/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_code/SIP_package/")
+	using SIP_package
 end
+
+# ╔═╡ 68f3d10f-46cf-46ae-b63c-eecc989eaaf4
+begin	
+	using Images
+	using VideoIO
+	using Statistics
+	using HDF5
+	using ImageView
+	using PlutoUI
+	using Revise
+end
+
+# ╔═╡ 8005de68-1e0d-47c4-b28b-b4bc6a525cf8
+using Plots
 
 # ╔═╡ 5fd55fbc-54a1-482c-9da7-0205508db611
 begin
@@ -72,7 +56,7 @@ bin_file = "$bin_dir/$file_name.h5"
 end
 
 # ╔═╡ 7373b4b4-0b69-4945-89b9-bb551fe31641
-bin_vid = video_conversion(file_path); # converts a target yt video into a binarized one
+bin_vid = SIP_package.video_conversion(file_path); # converts a target yt video into a binarized one
 
 # ╔═╡ 52063ab6-d66e-4d9a-ad59-9702a04bd7a5
 size(bin_vid)
@@ -134,6 +118,15 @@ begin
 	end
 end
 
+# ╔═╡ b591a3e2-830d-4d71-95f2-090090fe3135
+#just to save it
+begin
+using JSON
+open("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/data_repo/SIP_data/counts_test.json", "w") do file
+    JSON.print(file, tot_counts[1])
+end
+end
+
 # ╔═╡ b9b75657-f66c-430d-b893-15108e0cf562
 md"### iteration slider"
 
@@ -173,11 +166,8 @@ md"### Local maxima computation"
 # ╔═╡ 91a20253-4b5a-4959-8ed8-e583fa332c79
 begin
 myDict = copy(tot_counts[iteration_idx])
-local_maxima = get_loc_max(myDict)
+loc_max = get_loc_max(myDict, 70)
 end
-
-# ╔═╡ 8961e927-ed91-4aff-9a78-743b5dfa93ee
-loc_max = get_loc_max(myDict)
 
 # ╔═╡ 69831433-9a08-4174-93b8-44c17bc1e394
 @bind max_idx_t Slider(1:size(loc_max,1), show_value=true, default=1)
@@ -191,10 +181,36 @@ win_max_t = reshape(loc_max[max_idx_t], glider_dim)
 Gray.(win_max_t[:,:,time_idx_max_t])
 end
 
+# ╔═╡ 71e8c658-5880-4c24-a005-1e77ef00f5bd
+begin
+array_of_patches = Vector{Array{ColorTypes.Gray{Bool},3}}(undef, size(loc_max))
+counter = 0
+	for el in loc_max
+	    counter +=1
+		patch = Gray.(reshape(el, glider_dim))
+	    array_of_patches[counter] = patch
+end
+end
+
+# ╔═╡ 9bc31d42-40c8-4bc5-8dd1-6cb5b3d30387
+begin
+	theme(:default)
+    default(background_color=:lightgray) 
+	@gif for aaa in 1 : glider_dim[3]
+    global plot_list = [plot(
+                heatmap(el[:, :, aaa], color=:grays, axis=false),  # Base heatmap
+            ) for el in array_of_patches]  # Enumerate for titles
+    plot(plot_list...)  # Adjust layout as needed
+	end every 1 fps=2
+end
+
+# ╔═╡ e86331d9-f5c1-4e12-be81-20b3c0494f88
+typeof(plot_list)
+
 # ╔═╡ Cell order:
 # ╠═dca45676-0482-4d43-956c-365f91120a6e
-# ╠═b87e7088-8b5b-4e38-b325-ff63a6c2a8f3
 # ╠═485f8408-93b0-4dcc-9514-76f08f2f705a
+# ╠═68f3d10f-46cf-46ae-b63c-eecc989eaaf4
 # ╠═5fd55fbc-54a1-482c-9da7-0205508db611
 # ╠═7373b4b4-0b69-4945-89b9-bb551fe31641
 # ╠═52063ab6-d66e-4d9a-ad59-9702a04bd7a5
@@ -208,6 +224,7 @@ end
 # ╟─b9b75657-f66c-430d-b893-15108e0cf562
 # ╟─1b584e59-d0c1-46b1-a44d-7b1669ba1c78
 # ╠═c5e9ada8-9a66-4743-87ba-36a53e82d4f8
+# ╠═b591a3e2-830d-4d71-95f2-090090fe3135
 # ╟─c4962149-640e-4a1f-aed6-6ed3411579aa
 # ╠═a84d4d53-611d-47fe-919d-073c047495a2
 # ╠═d9dc9cf6-61e1-413f-a00a-dc0e87a3090d
@@ -218,7 +235,10 @@ end
 # ╠═6dd95fb1-1d25-46c9-a6fc-deaf5a2ff4c5
 # ╟─340bcbb1-dc45-4d87-a260-7a28134683d2
 # ╠═91a20253-4b5a-4959-8ed8-e583fa332c79
-# ╠═8961e927-ed91-4aff-9a78-743b5dfa93ee
 # ╠═69831433-9a08-4174-93b8-44c17bc1e394
 # ╠═15533d41-7a8c-43e5-920a-f1adc07c1d6a
 # ╠═deae04e2-ffd9-4973-a9ff-c4e026ec7d62
+# ╠═8005de68-1e0d-47c4-b28b-b4bc6a525cf8
+# ╠═71e8c658-5880-4c24-a005-1e77ef00f5bd
+# ╠═9bc31d42-40c8-4bc5-8dd1-6cb5b3d30387
+# ╠═e86331d9-f5c1-4e12-be81-20b3c0494f88

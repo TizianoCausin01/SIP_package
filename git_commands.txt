@@ -12,3 +12,26 @@ $ git restore --staged file_name # unstages file_name and then you can run the p
 $ git restore -s <commit ID> file_name # recovers file_name of <commit ID> 
 
 $ git revert <commit ID> # creates a new commit that undoes <commit ID>
+
+$ git log --patch file_name # prints out all the changes done to file_name and their corresponding commits
+
+$ .gitignore # it's a file in which you put filenames and folder names. It will not include them in the backup (it'd be a waste of disk space). You should add and commit it. If for instance you want to ignore all your images in a folder git ignore should have: *.png
+If specific_image.png shouldn't be ignored, put *.png and then: !specific_image.png to exclude it from the list
+
+$ .gitkeep # file in which you put the list of empty folders you want to commit anyways.
+
+$ git add -f file_name # to force git to add file_name anyways even though it is in .gitignore
+
+$ git remote add origin git@github.com:alflin/recipes.git # adds the local git repo to the github one just created. Origin stands for the local repo
+$ git remote -v # to check if the above command worked
+
+$ ssh -T git@github.com # to connect to github 
+
+$ git push origin main # pushes changes from local to github repo or:
+$ git push -u # to simply push the changes of the working directory upstream
+
+$ git pull origin main # to draw changes from github (e.g. s.b. else did some changes to some files)
+
+
+
+ 

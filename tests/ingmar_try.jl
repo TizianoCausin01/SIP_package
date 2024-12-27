@@ -56,7 +56,7 @@ include("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_code/s
 
 # for local maxima evaluation
 include("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_code/scripts/flip_element.jl")
-include("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_code/scripts/is_max.jl")
+include("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_code/scripts/del_wins.jl")
 include("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_code/scripts/get_loc_max.jl")
 end
 
@@ -176,8 +176,55 @@ myDict = copy(tot_counts[iteration_idx])
 local_maxima = get_loc_max(myDict)
 end
 
+# ╔═╡ 81485f42-a13a-4a7a-8dc5-8a3118772e79
+# ╠═╡ disabled = true
+#=╠═╡
+@bind max_idx Slider(1:size(local_maxima,1), show_value=true, default=1)
+  ╠═╡ =#
+
+# ╔═╡ e0bebc62-3621-4893-9c64-fb119240572a
+@bind time_idx_max Slider(1:size(window,3), show_value=true, default=1)
+
+# ╔═╡ 918917e4-f465-486a-b763-f98a0b646599
+#=╠═╡
+begin
+win_max = reshape(local_maxima[max_idx], glider_dim) 
+Gray.(win_max[:,:,time_idx_max])
+end
+  ╠═╡ =#
+
+# ╔═╡ e4a72178-fb5f-45ae-932c-f8c07de0919e
+function delete_wins(myDict, win)
+counter = 0
+    for position = 1 : length(win) # changes one element at the time
+       win_flipped = copy(win)
+       win_flipped = flip_element(win_flipped, position) # flips the window element in "position" 
+       
+       if haskey(myDict, win_flipped)   # it might have been already deleted or not present 
+           if myDict[win_flipped] > myDict[win]
+                break # don't include win in local maxima
+           end # if win_flipped > win
+       end # if haskey 
+       counter+=1
+    end # for position 
+    if counter == length(win)
+        return win
+    end
+end # EOF
+
 # ╔═╡ 8961e927-ed91-4aff-9a78-743b5dfa93ee
-loc_max = get_loc_max(myDict)
+begin
+	myDictt = copy(tot_counts[iteration_idx])
+	loc_max = Array{Vector{Bool}}(undef,0)
+	for i in myDictt
+		win = i.first
+		max = delete_wins(myDictt, win)
+		if ~(max===nothing)
+			push!(loc_max, max)
+		end
+	end
+	loc_max
+end
 
 # ╔═╡ 69831433-9a08-4174-93b8-44c17bc1e394
 @bind max_idx_t Slider(1:size(loc_max,1), show_value=true, default=1)
@@ -218,6 +265,10 @@ end
 # ╠═6dd95fb1-1d25-46c9-a6fc-deaf5a2ff4c5
 # ╟─340bcbb1-dc45-4d87-a260-7a28134683d2
 # ╠═91a20253-4b5a-4959-8ed8-e583fa332c79
+# ╠═81485f42-a13a-4a7a-8dc5-8a3118772e79
+# ╠═e0bebc62-3621-4893-9c64-fb119240572a
+# ╠═918917e4-f465-486a-b763-f98a0b646599
+# ╠═e4a72178-fb5f-45ae-932c-f8c07de0919e
 # ╠═8961e927-ed91-4aff-9a78-743b5dfa93ee
 # ╠═69831433-9a08-4174-93b8-44c17bc1e394
 # ╠═15533d41-7a8c-43e5-920a-f1adc07c1d6a
