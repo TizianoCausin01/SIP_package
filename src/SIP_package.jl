@@ -65,8 +65,9 @@ function wrapper_sampling(video_path::String, results_path::String, file_name::S
 	coarse_g_iterations[1] = bin_vid # stores iteration 0
 	for iter_idx ∈ 1:num_of_iterations
 		@info "running iteration $iter_idx"
-		@time begin
-			if iter_idx > 2
+		if iter_idx > 2
+			@info "running sampling"
+			@time begin
 				# samples the current iteration
 				counts_list[iter_idx] = glider(coarse_g_iterations[iter_idx], glider_dim) # samples the current iteration
 				loc_max_list[iter_idx] = get_loc_max(counts_list[iter_idx], percentile) # computes the local maxima
@@ -76,9 +77,12 @@ function wrapper_sampling(video_path::String, results_path::String, file_name::S
 				open("$(results_path)/loc_max_$(file_name)_iter$(iter_idx).json", "w") do file
 					JSON.print(file, loc_max_list[iter_idx])
 				end # open loc_max
-			end # if
-			# coarse-graining of the current iteration
-			if iter_idx < num_of_iterations
+			end #time
+		end # if
+		# coarse-graining of the current iteration
+		if iter_idx < num_of_iterations
+			@info "running coarse-graining"
+			@time begin
 				old_dim = size(coarse_g_iterations[iter_idx]) # gets the dimensions of the current iteration
 				new_dim = get_new_dimensions(old_dim, glider_coarse_g_dim) # computes the dimensions of the next iteration
 				# creates a 3D tuple of vectors with the steps the coarse-graining glider will have to do
@@ -93,8 +97,8 @@ function wrapper_sampling(video_path::String, results_path::String, file_name::S
 					glider_coarse_g_dim,
 					cutoff,
 				) # computation of new iteration array
-			end # if 
-		end # @time
+			end # time
+		end # if 
 	end # for
 	return counts_list, loc_max_list
 end # EOF
@@ -248,20 +252,21 @@ Outputs :
 - new_vid -> the new coarse-grained video
 """
 function glider_coarse_g(bin_vid, new_vid, tot_steps, glider_coarse_g_dim, cutoff)
-	counter_new_mat = [0, 0, 0] # rows, cols, depth initializes a new counter for indexing in the new matrix
-	for i_time ∈ tot_steps[3]
+	rows_steps, cols_steps, time_steps = tot_steps
+	new_rows, new_cols, new_time = [0, 0, 0] # rows, cols, depth initializes a new counter for indexing in the new matrix
+	for i_time ∈ time_steps
 		idx_time = i_time:i_time+glider_coarse_g_dim[3]-1 # you have to subtract one, otherwise you will end up getting a bigger glider
-		counter_new_mat[3] += 1 # updates the counter accordingly
-		counter_new_mat[1] = 0 # sets the counter of the inner loop to zero s.t. it doesn't overindex
-		for i_rows ∈ tot_steps[1]
+		new_time += 1 # updates the counter accordingly
+		new_rows = 0 # sets the counter of the inner loop to zero s.t. it doesn't overindex
+		for i_rows ∈ rows_steps
 			idx_rows = i_rows:i_rows+glider_coarse_g_dim[1]-1
-			counter_new_mat[1] += 1
-			counter_new_mat[2] = 0 # sets the counter of the inner loop to zero s.t. it doesn't overindex
-			for i_cols ∈ tot_steps[2]
+			new_rows += 1
+			new_cols = 0 # sets the counter of the inner loop to zero s.t. it doesn't overindex
+			for i_cols ∈ cols_steps
 				idx_cols = i_cols:i_cols+glider_coarse_g_dim[2]-1
-				counter_new_mat[2] += 1
+				new_cols += 1
 				white_count = sum(bin_vid[idx_rows, idx_cols, idx_time]) # index in video, gets the current window and immediately sums over it. 
-				new_vid[counter_new_mat[1], counter_new_mat[2], counter_new_mat[3]] = majority_rule(white_count, cutoff) # assigns the pixel of the coarse grained video in the correct position
+				new_vid[new_rows, new_cols, new_time] = majority_rule(white_count, cutoff) # assigns the pixel of the coarse grained video in the correct position
 			end # cols
 		end # rows
 	end # time
@@ -331,8 +336,8 @@ function glider(bin_vid, glider_dim)
 			idx_rows = i_rows:i_rows+glider_dim[1]-1
 			for i_cols ∈ 1:vid_dim[2]-glider_dim[2]
 				idx_cols = i_cols:i_cols+glider_dim[2]-1
-				window = vec(bin_vid[idx_rows, idx_cols, idx_time]) # index in video, gets the current window and immediately vectorizes it. 
-				counts = update_count(counts, window)
+				window = view(bin_vid, idx_rows, idx_cols, idx_time) # index in video, gets the current window and immediately vectorizes it. 
+				counts = update_count(counts, vec(window))
 			end # cols
 		end # rows
 	end # time
