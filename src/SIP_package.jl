@@ -4,7 +4,8 @@ module SIP_package
 # EXPORTED FUNCTIONS    
 # =========================
 
-export wrapper_sampling,
+export
+	wrapper_sampling,
 	split_vid,
 	video_conversion,
 	get_new_dimensions,
@@ -14,7 +15,9 @@ export wrapper_sampling,
 	glider,
 	get_nth_window,
 	get_loc_max,
-	plot_loc_max
+	plot_loc_max,
+	counts2prob
+
 
 # =========================
 # IMPORTED PACKAGES
@@ -29,6 +32,7 @@ using Images,
 	GR,
 	Plots,
 	JSON
+
 
 # =========================
 # WRAPPER ALL
@@ -512,6 +516,25 @@ function bitVec2imgs(loc_max, glider_dim)
 		array_of_patches[counter] = patch # stores the new patch
 	end # for el in loc_max
 	return array_of_patches
-end
+end # EOF
+
+
+"""
+counts2prob
+Converts the counts_dict into a probability dict, by normalizing the counts of the patches.
+Input:
+- counts_dict::Dict{BitVector, Int} -> Dictionary with the counts of the windows as values
+- approx::Int -> number of digits after the comma in the prob_dict
+
+Output:
+- prob_dict::Dict{BitVector, Float32} -> Dictionary with the probabilities of the windows as values
+"""
+function counts2prob(counts_dict::Dict{BitVector, Int}, approx::Int)::Dict{BitVector, Float32}
+	vals_counts_dict = values(counts_dict) # extracts the values of the counts_dict
+	tot_counts = sum(vals_counts_dict) # derives the normalizing factor
+	vals_prob_dict = round.(vals_counts_dict ./ tot_counts, digits = approx) # derives the values of the new dict 
+	prob_dict = Dict(zip(keys(counts_dict), vals_prob_dict)) # creates a new dict with probabilities as values
+	return prob_dict
+end # EOF
 
 end # module SIP_package
