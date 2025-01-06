@@ -34,7 +34,7 @@ counts_dir = "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/data_repo
 file_names = readdir(counts_dir)
 my_files = file_names[rank+1:nproc:length(file_names)] # cyclic distribution (like dealing cards) -> each process has a different rank so it will be assigned different files
 # the next line works only if nproc == length(file_names), that is if each process has only one file, of course this can be extended but see below
-fn = joinpath(counts_dir, my_files) # so far we can't handle the case in which it might have more than one file, but by merging the dicts within each process before the gathering it's gonna work fine
+fn = joinpath(counts_dir, my_files[1]) # so far we can't handle the case in which it might have more than one file, but by merging the dicts within each process before the gathering it's gonna work fine
 myDict = JSON.parsefile(fn)
 myDict_bitvec = convert_to_bitvector_dict(myDict)
 send_buf = MPI.serialize(myDict_bitvec)
@@ -42,21 +42,16 @@ send_buf = MPI.serialize(myDict_bitvec)
 send_size = length(send_buf)
 if rank == root
 	recv_sizes = Vector{Int}(undef, nproc)  # Preallocate an array to receive the gathered data
+	MPI.Gather!(Ref(send_size), recv_sizes, comm; root) # this sends only the sizes, not the whole file
 else
-	recv_sizes = Int[]
+	MPI.Gather!(Ref(send_size), nothing, comm; root) # this sends only the sizes, not the whole file
 end
-MPI.Gather!(Ref(send_size), recv_sizes, comm; root) # this sends only the sizes, not the whole file
+
 if rank == root
 	total_size = sum(recv_sizes)
-	recv_sizes = recv_sizes
 	recv_buf = Vector{UInt8}(undef, total_size)
 	offsets = (cumsum([0; recv_sizes[1:end-1]]))
 	recv_vbuf = VBuffer(recv_buf, recv_sizes)
-else
-	recv_buf = Vector{UInt8}()
-	offsets = Vector{Int}(undef, 0)
-end
-if rank == root
 	MPI.Gatherv!(send_buf, recv_vbuf, root, comm)
 	deserialized_dicts = [MPI.deserialize(recv_buf[offsets[i]+1:offsets[i]+recv_sizes[i]]) for i in 1:length(recv_sizes)]
 else
