@@ -33,40 +33,32 @@ end #EOF
 counts_dir = "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/data_repo/SIP_results/counts/"
 file_names = readdir(counts_dir)
 my_files = file_names[rank+1:nproc:length(file_names)] # cyclic distribution (like dealing cards) -> each process has a different rank so it will be assigned different files
-fn = joinpath(counts_dir, my_files[1])
+# the next line works only if nproc == length(file_names), that is if each process has only one file, of course this can be extended but see below
+fn = joinpath(counts_dir, my_files) # so far we can't handle the case in which it might have more than one file, but by merging the dicts within each process before the gathering it's gonna work fine
 myDict = JSON.parsefile(fn)
 myDict_bitvec = convert_to_bitvector_dict(myDict)
 send_buf = MPI.serialize(myDict_bitvec)
-if rank == 0
-	print(typeof(send_buf))
-end
 # Gather the sizes of the serialized buffers
 send_size = length(send_buf)
 if rank == root
 	recv_sizes = Vector{Int}(undef, nproc)  # Preallocate an array to receive the gathered data
 else
-	recv_sizes = Int32[]
+	recv_sizes = Int[]
 end
 MPI.Gather!(Ref(send_size), recv_sizes, comm; root) # this sends only the sizes, not the whole file
-
 if rank == root
 	total_size = sum(recv_sizes)
-	recv_sizes = Int32.(recv_sizes)
+	recv_sizes = recv_sizes
 	recv_buf = Vector{UInt8}(undef, total_size)
-
-	offsets = Int32.(cumsum([0; recv_sizes[1:end-1]]))
-	better_buf = VBuffer(recv_buf, recv_sizes)
-	println("Total size: ", total_size)
-	println("Recv sizes: ", recv_sizes)
-	println("Offsets: ", offsets)
+	offsets = (cumsum([0; recv_sizes[1:end-1]]))
+	recv_vbuf = VBuffer(recv_buf, recv_sizes)
 else
 	recv_buf = Vector{UInt8}()
-	offsets = Vector{Int32}(undef, 0)
+	offsets = Vector{Int}(undef, 0)
 end
 if rank == root
-	MPI.Gatherv!(send_buf, better_buf, root, comm)
+	MPI.Gatherv!(send_buf, recv_vbuf, root, comm)
 	deserialized_dicts = [MPI.deserialize(recv_buf[offsets[i]+1:offsets[i]+recv_sizes[i]]) for i in 1:length(recv_sizes)]
-	print(length(deserialized_dicts))
 else
 	MPI.Gatherv!(send_buf, nothing, root, comm)
 end
