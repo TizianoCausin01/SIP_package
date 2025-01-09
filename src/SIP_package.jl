@@ -16,7 +16,9 @@ export
 	get_nth_window,
 	get_loc_max,
 	plot_loc_max,
-	counts2prob
+	counts2prob,
+	prob_at_T,
+	entropy_T
 
 
 # =========================
@@ -536,5 +538,44 @@ function counts2prob(counts_dict::Dict{BitVector, Int}, approx::Int)::Dict{BitVe
 	prob_dict = Dict(zip(keys(counts_dict), vals_prob_dict)) # creates a new dict with probabilities as values
 	return prob_dict
 end # EOF
+
+
+"""
+prob_at_T
+Creates a dictionary with new probabilities for a configuration vec{σ} at temperature T (control parameter).
+P_T(vec{σ}) =[1/Z(T)]*[P(vec{σ})]^(1/T) 
+Input:
+- prob_dict::Dict{BitVector, Float32} -> the dictionary with normalized counts as values
+- T::Int -> temperature
+- approx::Int -> how much we want to approximate when counting the new probabilities
+
+Output:
+- new_prob_dict_T::Dict{BitVector, Float32} -> the new dictionary with P_T as values
+"""
+function prob_at_T(prob_dict::Dict{BitVector, Float32}, T::Int, approx::Int)::Dict{BitVector, Float32}
+	probs_T = (values(prob_dict)) .^ (1 / T) # P_T(vec{σ}) =[1/Z(T)]*[P(vec{σ})]^(1/T) here I am computing the second part of this equation
+	Z = sum(probs_T) # calculates the partition function -> Z(T) = Σ_{vec{σ}}{[P(vec{σ})]^(1/T)}
+	new_probs = round.(probs_T ./ Z, digits = approx) # derives the values of the new dict at T 
+	new_prob_dict_T = Dict(zip(keys(prob_dict), new_probs)) # creates a new dict with probabilities as values
+	if !isapprox(sum(values(new_prob_dict_T)), 1, atol = 10.0^(-approx + 2)) # just checking that probabilities sum up to one
+		throw(ValueError("the sum of probs is different from 1"))
+	end
+	return new_prob_dict_T
+end
+
+"""
+entropy_T
+Computes the physical entropy of the system at temperature T. S(T) = - Σ_{P_T(vec{σ})} {P_T(vec{σ}*ln(P_T(vec{σ}))).
+Input:
+- prob_dict_T::Dict{BitVector, Float32} -> the dictionary with probabilities at temperature T (see above)
+
+Output:
+- S_T::Float32 -> the entropy at temperature T. S(T) = - Σ_{P_T(vec{σ})} {P_T(vec{σ}*ln(P_T(vec{σ})))}
+"""
+function entropy_T(prob_dict_T::Dict{BitVector, Float32})::Float32
+	S_T = -dot(values(prob_dict_T), log.(values(prob_dict_T))) # S(T) = - Σ_{P_T(vec{σ})} {P_T(vec{σ}*ln(P_T(vec{σ})))} hence we compute the dot product between vectors
+	return S_T
+end
+
 
 end # module SIP_package
