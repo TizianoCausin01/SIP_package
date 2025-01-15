@@ -18,7 +18,8 @@ export
 	plot_loc_max,
 	counts2prob,
 	prob_at_T,
-	entropy_T
+	entropy_T,
+	numerical_heat_capacity_T
 
 
 # =========================
@@ -552,7 +553,7 @@ Input:
 Output:
 - new_prob_dict_T::Dict{BitVector, Float32} -> the new dictionary with P_T as values
 """
-function prob_at_T(prob_dict::Dict{BitVector, Float32}, T::Int, approx::Int)::Dict{BitVector, Float32}
+function prob_at_T(prob_dict::Dict{BitVector, Float32}, T, approx::Int)::Dict{BitVector, Float32}
 	probs_T = (values(prob_dict)) .^ (1 / T) # P_T(vec{σ}) =[1/Z(T)]*[P(vec{σ})]^(1/T) here I am computing the second part of this equation
 	Z = sum(probs_T) # calculates the partition function -> Z(T) = Σ_{vec{σ}}{[P(vec{σ})]^(1/T)}
 	new_probs = round.(probs_T ./ Z, digits = approx) # derives the values of the new dict at T 
@@ -573,9 +574,33 @@ Output:
 - S_T::Float32 -> the entropy at temperature T. S(T) = - Σ_{P_T(vec{σ})} {P_T(vec{σ}*ln(P_T(vec{σ})))}
 """
 function entropy_T(prob_dict_T::Dict{BitVector, Float32})::Float32
-	S_T = -dot(values(prob_dict_T), log.(values(prob_dict_T))) # S(T) = - Σ_{P_T(vec{σ})} {P_T(vec{σ}*ln(P_T(vec{σ})))} hence we compute the dot product between vectors
-	return S_T
+	log_p = log.(values(prob_dict_T))
+	nan_mask = isinf.(log_p) # checks where ln(p(σ)) = -inf because p(σ) = 0
+	log_p[nan_mask] .= 0 # substitues -inf with 0s, because lim_{p->0} of p*log(p) = 0
+	entropy = -dot(values(prob_dict_T), log_p) # S(T) = - Σ_{P_T(vec{σ})} {P_T(vec{σ}*ln(P_T(vec{σ}))) hence we compute the dot product between vectors
+	return entropy
 end
+
+"""
+numerical_heat_capacity_T
+Computes numerically the heat capacity [C(T) = T*(∂H(T)/∂T)] . The partial derivative is computed using the different quotient [H(T+ϵ) - H(T)]/ϵ .
+INPUT:
+- prob_dict::Dict{BitVector, Float32} -> the dictionary with probabilities at T=1 , so NOT yet modified.
+- T -> The temperature at which you want to calculate the derivative
+- approx::Int -> sig figs, how much we want to approximate when counting the new probabilities (when we create the new dictionaries)
+- ϵ -> the increment when calculating the numerical derivative [H(T+ϵ) - H(T)]/ϵ . The smaller it is the more precise we are, but it MUST be paired with
+a proper approx of the probability dicts, otherwise we'll see no change
+"""
+
+function numerical_heat_capacity_T(prob_dict::Dict{BitVector, Float32}, T, approx::Int, ϵ)
+	prob_dict_T = prob_at_T(prob_dict, T, approx)
+	prob_dict_Teps = prob_at_T(prob_dict, T + ϵ, approx)
+	h_T = entropy_T(prob_dict_T)
+	h_Teps = entropy_T(prob_dict_Teps)
+	heat_capacity = T * (((h_Teps) - h_T) ./ ϵ)
+	return heat_capacity
+end
+
 
 
 end # module SIP_package
