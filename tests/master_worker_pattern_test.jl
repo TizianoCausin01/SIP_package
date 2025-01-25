@@ -53,7 +53,7 @@ end
 function wrapper_sampling_parallel(video_path, num_of_iterations, glider_coarse_g_dim, glider_dim)
 	# video conversion into BitArray
 	@info "running binarization"
-	bin_vid = video_conversion(video_path) # converts a target yt video into a binarized one
+	bin_vid = whole_video_conversion(video_path) # converts a target yt video into a binarized one
 	# preallocation of dictionaries
 	counts_list = Vector{Dict{BitVector, Int64}}(undef, num_of_iterations) # list of count_dicts of every iteration
 	# loc_max_list = Vector{Vector{BitVector}}(undef, num_of_iterations) # list of loc_max of every iteration

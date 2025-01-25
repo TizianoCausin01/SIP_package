@@ -8,6 +8,7 @@ export
 	wrapper_sampling,
 	split_vid,
 	video_conversion,
+	whole_video_conversion,
 	get_new_dimensions,
 	get_cutoff,
 	compute_steps_glider,
@@ -58,7 +59,7 @@ Inputs :
 
 function wrapper_sampling(video_path::String, results_path::String, file_name::String, num_of_iterations::Int, glider_coarse_g_dim::Tuple{Int, Int, Int}, glider_dim::Tuple{Int, Int, Int}, percentile::Int)
 	# video conversion into BitArray
-	bin_vid = video_conversion(video_path) # converts a target yt video into a binarized one
+	bin_vid = whole_video_conversion(video_path) # converts a target yt video into a binarized one
 
 	# sampling and computation of local maxima  
 	# preallocation of dictionaries
@@ -72,7 +73,7 @@ function wrapper_sampling(video_path::String, results_path::String, file_name::S
 	coarse_g_iterations[1] = bin_vid # stores iteration 0
 	for iter_idx ∈ 1:num_of_iterations
 		@info "running iteration $iter_idx"
-		if iter_idx > 2
+		if iter_idx > 0
 			@info "running sampling"
 			@time begin
 				# samples the current iteration
@@ -154,6 +155,33 @@ function split_vid(file_name, output_name, segment_duration)
 	run(cmd) # runs the command
 end # EOF
 
+"""
+whole_video_conversion
+Converts the video from RGB to BitArray by thresholding it along its median luminance value.
+Converts each frame into grayscale, then computes the median and converts the whole grayscale 
+array into a BitArray.
+INPUT:
+- path2file::String -> the path to the file to convert
+
+OUTPUT:
+- array_bits::BitArray{3} -> the binarized video
+"""
+
+function whole_video_conversion(path2file::String)::BitArray{3}
+	reader = VideoIO.openvideo(path2file)
+	frame, height, width, depth = get_dimensions(reader)
+	gray_array = Array{Gray{N0f8}}(undef, height, width, depth) # preallocates an array of grayscale values
+	array_bits = BitArray(undef, height, width, depth) # preallocates a BitArray
+	copyto!(view(gray_array, :, :, 1), frame) # copies the first frame into the first element of the gray_array
+	count = 1
+	while !eof(reader)
+		count += 1
+		frame = VideoIO.read(reader)
+		gray_array[:, :, count] = Gray.(frame)
+	end # end while !eof(reader)
+	median_value = median(gray_array)
+	@. array_bits = gray_array < median_value # broadcasts the value in the preallocated array
+end # EOF
 
 """
 video_conversion
@@ -337,7 +365,7 @@ Outputs :
 function glider(bin_vid, glider_dim)
 	counts = Dict{BitVector, Int}()
 	vid_dim = size(bin_vid)
-	for i_time ∈ 1:vid_dim[3]-glider_dim[3] # step of sampling glider = 1
+	for i_time ∈ 1:vid_dim[3]-glider_dim[3] # step of sampling glider = 1 
 		idx_time = i_time:i_time+glider_dim[3]-1 # you have to subtract one, otherwise you will end up getting a bigger glider
 		for i_rows ∈ 1:vid_dim[1]-glider_dim[1]
 			idx_rows = i_rows:i_rows+glider_dim[1]-1
