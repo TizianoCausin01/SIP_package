@@ -7,7 +7,8 @@ Pkg.activate(".")
 using SIP_package
 using MPI
 using JSON
-const Int = Int32
+using ProgressMeter
+#const Int = Int32
 
 ##
 # vars for parallel
@@ -20,7 +21,7 @@ merger = nproc - 1
 name_vid = "test_venice_long"
 path2original = "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/data_repo/SIP_data/$(name_vid).mp4"
 split_folder = "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/data_repo/SIP_data/$(name_vid)_split"
-# split_files = "$(split_folder)/$(name_vid)%03d.mp4"
+split_files = "$(split_folder)/$(name_vid)%03d.mp4"
 # split_folder = "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/data_repo/SIP_results/counts"
 files_names = readdir(split_folder)
 n_tasks = length(files_names) # also the length of it
@@ -31,7 +32,7 @@ glider_coarse_g_dim = (3, 3, 3) # rows, cols, depth
 glider_dim = (2, 2, 2) # rows, cols, depth
 ##
 function convert_to_bitvector_dict(str_dict::Dict{String, Any})
-	bitvector_dict = Dict{BitVector, Int32}()
+	bitvector_dict = Dict{BitVector, Int64}()
 	for (key, value) in str_dict
 		# Check if the key matches the "Bool[...]" pattern
 		if occursin(r"^Bool\[[01, ]+\]$", key)  # Validate the format
@@ -40,7 +41,7 @@ function convert_to_bitvector_dict(str_dict::Dict{String, Any})
 			bits = split(bit_string, ", ")  # Split into strings
 			# Convert to BitVector and ensure Int32 for values
 			bit_array = parse.(Bool, bits)  # Parse directly to Bool
-			bitvector_dict[BitVector(bit_array)] = Int32(value)
+			bitvector_dict[BitVector(bit_array)] = Int64(value)
 		else
 			println("Skipping invalid key: $key")
 		end
@@ -54,7 +55,7 @@ function wrapper_sampling_parallel(video_path, num_of_iterations, glider_coarse_
 	@info "running binarization"
 	bin_vid = video_conversion(video_path) # converts a target yt video into a binarized one
 	# preallocation of dictionaries
-	counts_list = Vector{Dict{BitVector, Int32}}(undef, num_of_iterations) # list of count_dicts of every iteration
+	counts_list = Vector{Dict{BitVector, Int64}}(undef, num_of_iterations) # list of count_dicts of every iteration
 	# loc_max_list = Vector{Vector{BitVector}}(undef, num_of_iterations) # list of loc_max of every iteration
 	coarse_g_iterations = Vector{BitArray}(undef, num_of_iterations) # list of all the videos at different levels of coarse graining
 	# further variables for coarse-graining
@@ -121,7 +122,9 @@ if rank == root # I am root
 		MPI.Isend(-1, dst, dst + 32, comm) # signal to stop
 	end # for dst in 1:(nproc-2)
 elseif rank == merger  # I am merger ('ll merge the dicts)
+	prog = Progress(n_tasks) # for the progress bar
 	task_counter_merger = 1 # initializes a task counter in the merger, such that I don't have to handle root-merger operations
+	global tot_dicts = nothing
 	while task_counter_merger <= n_tasks # loops over all the processes
 		for src in 1:(nproc-2) # probes/ receives from all the workers
 			ismessage_len, status = MPI.Iprobe(src, rank + 64, comm)
@@ -133,13 +136,18 @@ elseif rank == merger  # I am merger ('ll merge the dicts)
 				MPI.Wait(req_len)
 				dict_arrives = MPI.Irecv!(dict_buffer, src, rank + 32, comm)
 				MPI.Wait(dict_arrives) # we have to wait that the dictionary fully arrives before attempting to do anything else
-				if !@isdefined tot_dicts
+				if tot_dicts === nothing
 					global tot_dicts = MPI.deserialize(dict_buffer)
 					task_counter_merger += 1
+					@info "TASK PROGRESS BAR"
+					next!(prog) # updates the progress bar
 				else
-					global tot_dicts = [mergewith!(+, tot_dicts[iter], MPI.deserialize(dict_buffer)[iter]) for iter in 1:num_of_iterations] # merges the different dicts from the different iterations together
+					[mergewith!(+, tot_dicts[iter], MPI.deserialize(dict_buffer)[iter]) for iter in 1:num_of_iterations] # merges the different dicts from the different iterations together
+					@info length(tot_dicts)
 					# global tot_dicts = mergewith!(+, tot_dicts, MPI.deserialize(dict_buffer)) # merges the different dicts from the different iterations together
 					global task_counter_merger += 1
+					@info "TASK PROGRESS BAR"
+					next!(prog)
 				end # if isnothing(tot_data)
 			end # if ismessage
 		end # for src in 1:(nproc-2)
