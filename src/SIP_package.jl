@@ -549,6 +549,83 @@ function bitVec2imgs(loc_max, glider_dim)
 	return array_of_patches
 end # EOF
 
+# =========================
+# TEMPLATE MATCHING
+# =========================
+
+"""
+template_matching
+Loops through the video and finds the patches that correspond to the local maximum selected (target_win) along with
+the surrounding pixels, to find the analogues of Stephens 2013 fig 4 in our experiment.
+It skips the patches that are at the borders because not extendible (artifacts deriving from possible paddings are
+worse than sampling less patches).
+It loops through the video, finds the features that match the target_win, adds the matches and their surroundings 
+to a storage (tot_surr), while keeping track of how many matches were found (tot_matches) for further averaging.
+The final step would be the averaging itself (avg_patch = tot_surr / tot_matches), but we preferred to leave it out 
+for possible parallelization.
+INPUT:
+- target_vid::BitArray -> the binarized chunk of video
+- target_win::BitArray -> the extracted local maximum
+- extension_surr::Int -> how many pixels you want as surrounding in each part of the window
+
+OUTPUT:
+- tot_surr::UInt64 -> the sum over all the matches found in the chunk of the video
+- tot_matches::Int -> the number of matches found
+"""
+function template_matching(target_vid::BitArray, target_win::BitArray, extension_surr::Int)
+	# vars for initialization
+	vid_dim = size(target_vid) # size of the video
+	target_win = Array(target_win) # turns it into a Bool for comparison below (current_win == target_win)
+	size_win = size(target_win) # how big is the target win
+	size_surr = size_win .+ extension_surr * 2 # how big are the neighbors of the target win -> obtained adding the extension (*2 because each dimension has 2 sides)
+	tot_matches = 0 # records the total number of matches 
+	tot_surr = zeros(UInt64, size_surr[1], size_surr[2], size_surr[3])
+	for i_time in (1+extension_surr):((vid_dim[3]+1)-size_win[3]-extension_surr) # +/- bc I don't want to idx outside the video. Since each iteration is the onset of the index, we conclude the iterator at size_pic[1] - size_win[1] - extension_surroundings (s.t. the end of the window is within the pic)
+		lims_time = get_lims(i_time, size_win[3]) # computes the first and last rows of the current iteration of the glider
+		idx_time = lims_time[1]:lims_time[2] # used to idx the rows of the glider
+		for i_rows in (1+extension_surr):((vid_dim[1]+1)-size_win[1]-extension_surr) # +/- bc I don't want to idx outside the video. Since each iteration is the onset of the index, we conclude the iterator at size_pic[1] - size_win[1] - extension_surroundings (s.t. the end of the window is within the pic)
+			lims_rows = get_lims(i_rows, size_win[1]) # computes the first and last rows of the current iteration of the glider
+			idx_rows = lims_rows[1]:lims_rows[2] # used to idx the rows of the glider
+			for i_cols in (1+extension_surr):((vid_dim[2]+1)-size_win[2]-extension_surr) # - 
+				lims_cols = get_lims(i_cols, size_win[2]) # computes the first and last cols of the current iteration of the glider
+				idx_cols = lims_cols[1]:lims_cols[2] # used to idx the cols of the glider
+				current_win = view(target_vid, idx_rows, idx_cols, idx_time) # index in the array
+				if current_win == target_win
+					lims_time_surr = (lims_time[1] - extension_surr, lims_time[2] + extension_surr) # appends the extensions over the limits to get a larger window
+					lims_rows_surr = (lims_rows[1] - extension_surr, lims_rows[2] + extension_surr)
+					lims_cols_surr = (lims_cols[1] - extension_surr, lims_cols[2] + extension_surr)
+					current_surr = target_vid[lims_rows_surr[1]:lims_rows_surr[2], lims_cols_surr[1]:lims_cols_surr[2], lims_time_surr[1]:lims_time_surr[2]]
+					tot_surr += UInt8.(current_surr)
+					tot_matches += 1
+				end # if current_win==target_win
+			end # for i_cols
+		end # for i_rows
+	end # for i_time
+	# avg_patch = tot_surr / tot_matches
+	return tot_surr, tot_matches
+end # EOF
+
+"""
+get_lims
+Finds the limits of a certain glider. Used in template_matching.
+INPUT:
+- i::Int -> the current iterator at some dimension
+- size_glider::Int -> the size of the glider at some dimension
+
+OUTPUT
+- lims::Tuple{Int, 2} -> the beginning and the end of a certain glider dimension
+"""
+
+function get_lims(i::Int, size_glider::Int)
+	lims = (i, i + (size_glider - 1)) # the -1 because otherwise you'd get one element more (e.g. if size_glider=3 , 1:4 -> 4 elements)
+	return lims
+end
+
+
+
+# =========================
+# PHYSICAL QUANTITIES    
+# =========================
 
 """
 counts2prob
