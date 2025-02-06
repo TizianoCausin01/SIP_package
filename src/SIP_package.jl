@@ -121,10 +121,8 @@ split_vid
 Splits the video in pieces of the specified segment_duration 
 and then saves them in the specified output_name
 Inputs :
-- file_name -> complete path to the file
-- output_name -> complete path for the output 
-				(must have %03d to save them in progressive order
-				starting from 000 like in python)
+- path2data::String -> complete path to the folder where all the videos are stored
+- file_name::String -> name of the video 				
 - segment_duration -> how long should the computed segment be in seconds
 						(the last could inevitably be shorter)
 
@@ -137,20 +135,27 @@ ffmpeg
 -f segment    # format : segment of video
 -segment_time segment_duration # duration of each segment
 -reset_timestamps 1 # every segment will have independent timestamps starting from 00:00:00
-output_name  
+output_name  # (must have %03d to save them in progressive order
+				starting from 000 like in python)
 `
 """
-function split_vid(file_name, output_name, segment_duration)
+function split_vid(path2data::String, file_name::String, segment_duration::Int)
+	original_data = "$(path2data)/$(file_name).mp4" # path to the original video	
+	split_folder = "$(path2data)/$(file_name)_split" # folder where the chunks will go 
+	split_files = "$(split_folder)/$(file_name)%03d.mp4" # name of the chunks (see above)
+	if !isdir(split_folder) # checks if the directory already exists
+		mkpath(split_folder) # if not, it creates the folder where to put the split_files
+	end # if !isdir(dir_path)
 
 	cmd = `
 	/opt/homebrew/bin/ffmpeg
-	-i $file_name
+	-i $original_data
 	-an
 	-c:v copy
 	-f segment
 	-segment_time $segment_duration
 	-reset_timestamps 1
-	$output_name
+	$split_files
 `
 	run(cmd) # runs the command
 end # EOF
