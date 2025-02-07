@@ -20,7 +20,9 @@ export
 	counts2prob,
 	prob_at_T,
 	entropy_T,
-	numerical_heat_capacity_T
+	numerical_heat_capacity_T,
+	json2dict
+
 
 
 # =========================
@@ -711,6 +713,36 @@ function numerical_heat_capacity_T(prob_dict::Dict{BitVector, Float32}, T, appro
 	return heat_capacity
 end
 
+# =========================
+# CHECKPOINTING AND DICT HANDLING 
+# =========================
 
+"""
+json2dict
+Loads and converts the saved dictionary from .json format.
+
+INPUT:
+- path2dict::String -> the path to the dictionary.json
+
+OUTPUT:
+- bitvector_dict::Dict{BitVector, Int} -> the dictionary in the original format
+"""
+
+function json2dict(path2dict::String)
+	str_dict = JSON.parsefile(path2dict) # downloads the dict, JSON turned the dict into a Dict{String, Any} where the strings are like: "Bool[1, 0, 1, 1, 0, 1, 1, 0]"
+	bitvector_dict = Dict{BitVector, Int}() # preallocates
+	for (key, value) in str_dict
+		# Check if the key matches the "Bool[...]" pattern
+		if occursin(r"^Bool\[[01, ]+\]$", key)  # Validate the format
+			# Extract the bit sequence inside the square brackets
+			bit_string = replace(key, r"Bool\[" => "", r"\]" => "")  # Remove "Bool[" and "]"
+			bits = parse.(Int, split(bit_string, ", "))  # Split and parse into integers
+			bitvector_dict[BitVector(bits)] = value # allocates the value related to the key in the Dict{BitVector, Int}
+		else
+			println("Skipping invalid key: $key")  # Log invalid keys
+		end
+	end
+	return bitvector_dict
+end
 
 end # module SIP_package
