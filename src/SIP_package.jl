@@ -21,7 +21,8 @@ export
 	prob_at_T,
 	entropy_T,
 	numerical_heat_capacity_T,
-	json2dict
+	json2dict,
+	jsd
 
 
 
@@ -744,5 +745,69 @@ function json2dict(path2dict::String)
 	end
 	return bitvector_dict
 end
+
+# =========================
+# JSD computation
+# =========================
+
+"""
+avg_PD
+Creates the average probability distribution between two dicts for computing JSD.
+Sums the distributions and then divides by 2.
+INPUT:
+- dict1, dict2 ::Dict{BitVector, Int} -> the two dicts representing the probability distributions
+
+OUTPUT:
+- avg_dict::Dict{BitVector, Int} -> the average probability distribution
+"""
+function avg_PD(dict1, dict2)
+	avg_dict = mergewith(+, dict1, dict2)
+	avg_dict = Dict(key => val / 2.0 for (key, val) in avg_dict)
+	return avg_dict
+end
+
+"""
+sing_kld
+Computes KLD for a sing val of x from the probability distributions P(x) and Q(x).
+INPUT:
+- p, q::Float -> values of probability distribution for a certain configuration x
+
+OUTPUT:
+- 0 or p * (log2(p / q)) -> from the formula of the KLD
+"""
+function sing_kld(p, q)
+	if p == 0
+		return 0 # by convention p*log2(p) = 0 in the lim
+	else
+		return p * (log2(p / q))
+	end # p == 0
+end # EOF
+
+
+"""
+jsd
+Computes the Jensen-Shannon divergence, defined as jsd(P||Q) = [KLD(P||M)+KLD(Q||M)]/2 . Where M(x):=[P(x)+Q(x)]/2 
+It is a way to symmetrize the KLD. 
+INPUT:
+- dict1, dict2 ::Dict{BitVector, Int} -> the two dicts representing the probability distributions
+- ϵ::Float -> small constant to add to the configurations with probability=0 to avoid getting Inf or NaN.
+It's a conditional argument, to be specified like this: jsd(dict1, dict2; ϵ = 1e-12) 
+
+OUTPUT:
+- jsd::Float64 -> the result of the above operation
+"""
+
+function jsd(dict1, dict2; ϵ = 1e-10)
+	jsd = 0
+	avg_dict = avg_PD(dict1, dict2)
+	for key in keys(avg_dict)
+		val1 = get!(dict1, key, 0)
+		val2 = get!(dict2, key, 0)
+		avg_val = max(avg_dict[key], ϵ) # max ensures that we don't get avg_val = 0 thus causing NaN
+		jsd += 1 / 2 * (sing_kld(val1, avg_val) + sing_kld(val2, avg_val))
+	end # key in keys(avg_PD)
+	return jsd
+end # EOF
+
 
 end # module SIP_package
