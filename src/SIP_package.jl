@@ -22,7 +22,8 @@ export
 	entropy_T,
 	numerical_heat_capacity_T,
 	json2dict,
-	jsd
+	jsd,
+	meg_sampling
 
 
 
@@ -809,5 +810,139 @@ function jsd(dict1, dict2; ϵ = 1e-10)
 	return jsd
 end # EOF
 
+# =========================
+# MEG COARSE-GRAINING AND SAMPLING
+# =========================
+
+
+"""
+meg_sampling
+It loops through the target binarized 1D time-series and samples it in windows of size glider_dim. It does so
+at various iterations of coarse graining.
+INPUT:
+- meg_signal::BitVector -> the binarized meg signal from a target electrodes
+- num_of_iterations::Int -> how many coarse-graining iterations we will do
+- glider_coarse_g_dim::Int -> how big will be the window of coarse-graining at each iteration
+- glider_dim::Int -> length of the window that we are sampling
+
+OUTPUT:
+- counts_list::Vector{Dict{BitVector, Int}} -> ordered vector of dicts each having as keys the windows and 
+as values the counts of those windows
+"""
+
+
+function meg_sampling(bin_signal::BitVector, num_of_iterations::Int, glider_coarse_g_dim::Int, glider_dim::Int)::Vector{Dict{BitVector, Int}}
+	# sampling and computation of local maxima  
+	# preallocation of dictionaries
+	counts_list = Vector{Dict{BitVector, Int}}(undef, num_of_iterations) # list of count_dicts of every iteration
+	coarse_g_iterations = Vector{BitArray}(undef, num_of_iterations) # list of all the videos at different levels of coarse graining
+	# further variables for coarse-graining
+	cutoff = glider_coarse_g_dim / 2 # sets the cutoff for the majority rule 
+	coarse_g_iterations[1] = bin_signal # stores iteration 0
+	for iter_idx ∈ 1:num_of_iterations
+		@info "running iteration $iter_idx"
+		# samples the current iteration
+		counts_list[iter_idx] = meg_glider(coarse_g_iterations[iter_idx], glider_dim) # samples the current iteration
+		if iter_idx < num_of_iterations
+			old_dim = length(coarse_g_iterations[iter_idx]) # gets the dimensions of the current iteration
+			new_dim = meg_get_new_dimensions(old_dim, glider_coarse_g_dim) # computes the dimensions of the next iteration
+			# creates a 3D tuple of vectors with the steps the coarse-graining glider will have to do
+			steps_coarse_g = meg_compute_steps_glider(glider_coarse_g_dim, old_dim) # precomputes the steps of the coarse-graining glider
+			coarse_g_iterations[iter_idx+1] = BitArray(undef, new_dim) # preallocation of new iteration array
+			fill!(coarse_g_iterations[iter_idx+1], false)
+			coarse_g_iterations[iter_idx+1] = meg_glider_coarse_g(
+				coarse_g_iterations[iter_idx],
+				coarse_g_iterations[iter_idx+1],
+				steps_coarse_g,
+				glider_coarse_g_dim,
+				cutoff,
+			) # computation of new iteration array
+		end # if 
+	end # for
+	return counts_list
+end # EOF
+
+
+"""
+meg_get_new_dimensions
+Derives the new dimensions of the coarse grained video.
+INPUT:
+- signal_dim::Int -> the length of the MEG signal
+- coarse_g_dim:Int -> the dimensions of the coarse graining to be done
+OUTPUT:
+- new_dim::Int -> the length of the new coarse-grained signal
+"""
+function meg_get_new_dimensions(signal_dim::Int, coarse_g_dim::Int)::Int
+	new_dim = fld(signal_dim, coarse_g_dim) # floor division s.t it won't overindex
+	return new_dim
+end # EOF
+
+"""
+meg_glider_coarse_g
+It's the glider for coarse graining. Loops over all the steps 
+and returns a new video which is the old video coarse grained. 
+Inputs :
+- meg_signal::BitVector -> the binarized meg signal from the previous iteration
+- new_signal::BitVector -> a preallocated vector for the newly coarse-grained signal
+- tot_steps::Vector{Int} -> a vector indicating the onset of each new step
+- glider_coarse_g_dim::Int -> dimension of the coarse graining glider
+- cutoff -> given the dimensions of the glider, the cutoff for the majority rule
+
+Outputs : 
+- new_signal::BitVector -> the new coarse-grained video
+"""
+function meg_glider_coarse_g(meg_signal::BitVector, new_signal::BitVector, tot_steps::Vector{Int}, glider_coarse_g_dim::Int, cutoff)::BitVector
+	new_time = 0 # rows, cols, depth initializes a new counter for indexing in the new matrix
+	for i_time ∈ tot_steps
+		idx_time = i_time:i_time+glider_coarse_g_dim-1 # you have to subtract one, otherwise you will end up getting a bigger glider
+		white_count = sum(meg_signal[idx_time]) # index in video, gets the current window and immediately sums over it. 
+		new_time += 1
+		new_signal[new_time] = majority_rule(white_count, cutoff) # assigns the pixel of the coarse grained video in the correct position
+	end # for i_time ∈ time_steps
+	return new_signal
+end # EOF
+
+
+"""
+meg_compute_steps_glider
+Creates a tuple with the steps the glider will have to do in each dimension. 
+Each number in the list is the initial element in the new window. 
+It subtracts the glider_dim such that we won't overindex.
+INPUT:
+- glider_dim::Int -> dimension of the coarse graining 
+- signal_dim::Int -> length of the meg signal
+
+OUTPUT:
+- tot_steps::Vector{Int} -> all the steps of the coarse graining glider
+"""
+function meg_compute_steps_glider(glider_dim::Int, signal_dim::Int)::Vector{Int}
+	tot_steps = (1:glider_dim:signal_dim-glider_dim)
+	return tot_steps
+end # EOF
+
+
+"""
+glider
+Creates a glider that slides over the given binarized video 
+and counts the configuration occurrences. Step=1
+Inputs : 
+- bin_signal::BitVector -> the binarized (BitArray) MEG signal
+- glider_dim::Int -> the length of the window that we are sampling 
+
+Outputs :
+- counts -> it's a dict with BitVector as keys and Int as values. 
+			It stores the counts of windows configurations
+"""
+
+function meg_glider(bin_signal::BitVector, glider_dim::Int)::Dict{BitVector, Int}
+	counts = Dict{BitVector, Int}()
+	signal_dim = length(bin_signal)
+	for i_time ∈ 1:signal_dim-glider_dim # step of sampling glider = 1 
+		idx_time = i_time:i_time+glider_dim-1 # you have to subtract one, otherwise you will end up getting a bigger glider
+		window = view(bin_signal, idx_time) # index in video, gets the current window and immediately vectorizes it. 
+		counts = update_count(counts, vec(window))
+	end # time
+	return counts
+end # EOF
 
 end # module SIP_package
