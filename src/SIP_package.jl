@@ -23,7 +23,9 @@ export
 	numerical_heat_capacity_T,
 	json2dict,
 	jsd,
-	meg_sampling
+	meg_sampling,
+	get_top_windows,
+	parallel_get_loc_max
 
 
 
@@ -476,7 +478,7 @@ Output:
 - if it's not : nothing
 """
 function is_max(myDict, win)
-	win_freq = get(myDict, win, -1) # if the key doesn't exit, assign -1
+	win_freq = get(myDict, win, -1) # if the key doesn't exists, assign -1
 	for position ∈ 1:length(win) # changes one element at the time
 		flipped_win = flip_element(win, position) # flips the window element in "position" 
 		if get(myDict, flipped_win, 0) > win_freq # new win might have been not present, that's why we use get 
@@ -557,6 +559,57 @@ function bitVec2imgs(loc_max, glider_dim)
 	end # for el in loc_max
 	return array_of_patches
 end # EOF
+
+
+# =========================
+# LOCAL MAXIMA IN PARALLEL
+# =========================
+
+"""
+parallel_get_loc_max
+Function to run the local maxima of a PD in parallel (i.e. by splitting a sorted array of pairs in many small steps).
+We just flip every element in the BitVectorto see if it's a maximum, and if so we store it. The for loop iterates through a portion of the
+array, such that every worker will do just a part of the work.
+
+INPUT:
+- myDict::Dict{BitVector, Int} -> the dictionary with the counts of a target coarse-graining iteration
+- top_nth_sorted_counts::Vector{Pair{BitVector, Int64}} -> the sorted "dictionary" (it's not a dict anymore!) with the top n% most occurring windows
+- start::Int -> the last element to skip, it'll start to iterate at start+1, if it surpasses the length of top_nth_sorted_counts it'll just not loop
+- iterations::Int -> the number of elements it will iterate through, typically it's the result of a ceiling division length(top_nth_sorted_counts)/nproc , if it surpasses the length of top_nth_sorted_counts it'll just stop looping
+
+OUTPUT:
+- loc_max::Vector{BitVector} -> an array with all the local maxima in that portion of myDict
+"""
+function parallel_get_loc_max(myDict::Dict{BitVector, Int}, top_nth_sorted_counts::Vector{Pair{BitVector, Int64}}, start::Int, iterations::Int)::Vector{BitVector}
+	loc_max = Vector{BitVector}(undef, 0) # initializes as a vector of BitVectors
+	for element in Iterators.take(Iterators.drop(top_nth_sorted_counts, start), iterations) # loops through top_nth_sorted_counts from start to start + iterations, if the array finishes before, it ends before
+		win = element.first # extracts the key
+		max = is_max(myDict, win) # inspects if it's a max
+		if ~(max === nothing) # if max exists, updates loc_max
+			push!(loc_max, max)
+		end # if max exists
+	end # for every element
+	return loc_max # returns the loc_max
+end # EOF
+
+"""
+get_top_windows
+Sorts myDict and keeps only percentile% of it.
+
+INPUT:
+- myDict::Dict{BitVector, Int} -> the dict with the counts
+- percentile::Int -> to select the top percentile% of windows (according to the counts)
+
+OUTPUT:
+- top_counts::Vector{Pair{BitVector, Int64}} -> the top percentile% counts sorted in decreasing order
+"""
+function get_top_windows(myDict::Dict{BitVector, Int}, percentile::Int)::Vector{Pair{BitVector, Int64}}
+	sorted_counts = sort(collect(myDict), by = x -> x[2], rev = true) # sorts the dictionary of counts according to the values and converts it into a Vector{Pair{}}
+	top_nth = Int(round(2^length(sorted_counts[1].first) * percentile / 100)) # computes the top nth elements
+	top_counts = sorted_counts[1:top_nth]
+	return top_counts
+end
+
 
 # =========================
 # TEMPLATE MATCHING
