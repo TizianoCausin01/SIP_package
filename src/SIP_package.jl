@@ -580,7 +580,7 @@ INPUT:
 OUTPUT:
 - loc_max::Vector{BitVector} -> an array with all the local maxima in that portion of myDict
 """
-function parallel_get_loc_max(myDict::Dict{BitVector, Int}, top_nth_sorted_counts::Vector{Pair{BitVector, Int64}}, start::Int, iterations::Int)::Vector{BitVector}
+function parallel_get_loc_max(myDict::Dict{BitVector, Int}, top_nth_sorted_counts::Vector{Pair{BitVector, Int64}}, start::Integer, iterations::Integer)::Vector{BitVector}
 	loc_max = Vector{BitVector}(undef, 0) # initializes as a vector of BitVectors
 	for element in Iterators.take(Iterators.drop(top_nth_sorted_counts, start), iterations) # loops through top_nth_sorted_counts from start to start + iterations, if the array finishes before, it ends before
 		win = element.first # extracts the key
