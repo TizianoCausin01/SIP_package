@@ -454,7 +454,7 @@ Dict{BitVector, Int}
 function get_loc_max(myDict, percentile)
 	loc_max = Vector{BitVector}(undef, 0) # initializes as a vector of BitVectors
 	sorted_counts = sort(collect(myDict), by = x -> x[2], rev = true) # sorts the dictionary of counts according to the values and converts it into a Vector{Pair{}}
-	top_nth = Int(round(2^length(sorted_counts[1].first) * percentile / 100)) # computes the top nth elements
+	top_nth = Int(round(length(sorted_counts) * percentile / 100)) # computes the top nth elements
 	for element in Iterators.take(sorted_counts, top_nth) # loops through the top nth-elements
 		win = element.first # extracts the key
 		max = is_max(myDict, win) # inspects if it's a max
@@ -599,14 +599,14 @@ Sorts myDict and keeps only percentile% of it.
 
 INPUT:
 - myDict::Dict{BitVector, Int} -> the dict with the counts
-- percentile::Int -> to select the top percentile% of windows (according to the counts)
+- percentile::Int -> to select the top percentile% of existing windows (according to the counts)
 
 OUTPUT:
 - top_counts::Vector{Pair{BitVector, Int64}} -> the top percentile% counts sorted in decreasing order
 """
 function get_top_windows(myDict::Dict{BitVector, Int}, percentile::Int)::Vector{Pair{BitVector, Int64}}
 	sorted_counts = sort(collect(myDict), by = x -> x[2], rev = true) # sorts the dictionary of counts according to the values and converts it into a Vector{Pair{}}
-	top_nth = Int(round(2^length(sorted_counts[1].first) * percentile / 100)) # computes the top nth elements
+	top_nth = Int(round(length(sorted_counts) * percentile / 100)) # computes the top nth elements
 	top_counts = sorted_counts[1:top_nth]
 	return top_counts
 end
