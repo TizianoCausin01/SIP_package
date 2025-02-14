@@ -25,7 +25,8 @@ export
 	jsd,
 	meg_sampling,
 	get_top_windows,
-	parallel_get_loc_max
+	parallel_get_loc_max,
+	template_matching
 
 
 
@@ -617,31 +618,28 @@ end
 
 """
 template_matching
-Loops through the video and finds the patches that correspond to the local maximum selected (target_win) along with
+Loops through the video and finds the patches that correspond to the local maxima in the dict along with
 the surrounding pixels, to find the analogues of Stephens 2013 fig 4 in our experiment.
 It skips the patches that are at the borders because not extendible (artifacts deriving from possible paddings are
 worse than sampling less patches).
-It loops through the video, finds the features that match the target_win, adds the matches and their surroundings 
-to a storage (tot_surr), while keeping track of how many matches were found (tot_matches) for further averaging.
-The final step would be the averaging itself (avg_patch = tot_surr / tot_matches), but we preferred to leave it out 
-for possible parallelization.
+It loops through the video, finds the features that match the loc_max_dict keys, adds the matches and their surroundings 
+to a storage (surr_dict[win][1]), while keeping track of how many matches were found (surr_dict[win][2]) for further averaging.
+The final step would be the averaging itself (avg_patch = surr_dict[win][1] / surr_dict[win][2]), but we preferred to leave it out 
+for possible parallelization (it will require merging the dicts).
 INPUT:
 - target_vid::BitArray -> the binarized chunk of video
-- target_win::BitArray -> the extracted local maximum
+- loc_max_dict::Dict{BitVector, Int} -> the dict with the extracted local maxima
+- size_win::Tuple{Integer, Integer, Integer} -> the dimensions of the initial window sampled
 - extension_surr::Int -> how many pixels you want as surrounding in each part of the window
 
 OUTPUT:
-- tot_surr::UInt64 -> the sum over all the matches found in the chunk of the video
-- tot_matches::Int -> the number of matches found
+- surr_dict::Dict{BitVector, Vector{Any}} -> the dict with as keys the local max, as values Vector{Any} [summed_surrounding_pixels, counts_of_occurrences] 
 """
-function template_matching(target_vid::BitArray, target_win::BitArray, extension_surr::Int)
+function template_matching(target_vid::BitArray{3}, loc_max_dict::Dict{BitVector, Int}, size_win::Tuple{Integer, Integer, Integer}, extension_surr::Int)
 	# vars for initialization
 	vid_dim = size(target_vid) # size of the video
-	target_win = Array(target_win) # turns it into a Bool for comparison below (current_win == target_win)
-	size_win = size(target_win) # how big is the target win
 	size_surr = size_win .+ extension_surr * 2 # how big are the neighbors of the target win -> obtained adding the extension (*2 because each dimension has 2 sides)
-	tot_matches = 0 # records the total number of matches 
-	tot_surr = zeros(UInt64, size_surr[1], size_surr[2], size_surr[3])
+	surr_dict = Dict(k => [zeros(UInt64, size_surr[1], size_surr[2], size_surr[3]), 0] for k in keys(loc_max_dict)) # # initializes a dict with the same keys as the loc_max, but as value a Vector{Any} = [summed_surrounding_pixels, count_of_instances]
 	for i_time in (1+extension_surr):((vid_dim[3]+1)-size_win[3]-extension_surr) # +/- bc I don't want to idx outside the video. Since each iteration is the onset of the index, we conclude the iterator at size_pic[1] - size_win[1] - extension_surroundings (s.t. the end of the window is within the pic)
 		lims_time = get_lims(i_time, size_win[3]) # computes the first and last rows of the current iteration of the glider
 		idx_time = lims_time[1]:lims_time[2] # used to idx the rows of the glider
@@ -651,20 +649,21 @@ function template_matching(target_vid::BitArray, target_win::BitArray, extension
 			for i_cols in (1+extension_surr):((vid_dim[2]+1)-size_win[2]-extension_surr) # - 
 				lims_cols = get_lims(i_cols, size_win[2]) # computes the first and last cols of the current iteration of the glider
 				idx_cols = lims_cols[1]:lims_cols[2] # used to idx the cols of the glider
-				current_win = view(target_vid, idx_rows, idx_cols, idx_time) # index in the array
-				if current_win == target_win
+				current_win = target_vid[idx_rows, idx_cols, idx_time] # index in the array
+				vec_current_win = vec(current_win)
+				if haskey(surr_dict, vec_current_win)
 					lims_time_surr = (lims_time[1] - extension_surr, lims_time[2] + extension_surr) # appends the extensions over the limits to get a larger window
 					lims_rows_surr = (lims_rows[1] - extension_surr, lims_rows[2] + extension_surr)
 					lims_cols_surr = (lims_cols[1] - extension_surr, lims_cols[2] + extension_surr)
 					current_surr = target_vid[lims_rows_surr[1]:lims_rows_surr[2], lims_cols_surr[1]:lims_cols_surr[2], lims_time_surr[1]:lims_time_surr[2]]
-					tot_surr += UInt8.(current_surr)
-					tot_matches += 1
+					surr_dict[vec_current_win][1] += UInt64.(current_surr)
+					surr_dict[vec_current_win][2] += 1
 				end # if current_win==target_win
 			end # for i_cols
 		end # for i_rows
 	end # for i_time
 	# avg_patch = tot_surr / tot_matches
-	return tot_surr, tot_matches
+	return surr_dict
 end # EOF
 
 """

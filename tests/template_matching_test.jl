@@ -9,19 +9,22 @@ using SIP_package
 using Images
 ##
 data_dir = "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/data_repo/SIP_data" # dir where the yt videos have been downloaded
-file_name = "test_venice" # file name across different manipulations
-video_path = "$data_dir/$file_name.mp4" # file path to the yt video
+file_name = "test_venice_long" # file name across different manipulations
+video_path = "$(data_dir)/$(file_name)_split/$(file_name)000.mp4" # file path to the yt video
+results_dir = "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/data_repo/SIP_results"
+loc_max_path = "$(results_dir)/$(file_name)_counts/loc_max_$(file_name)/loc_max_$(file_name)_iter1.json"
 ##
 data = whole_video_conversion(video_path)
 ##
-A = trues(3, 3, 3)
-A[:, 2, :] .= 0
-
+loc_max_dict = json2dict(loc_max_path)
+dict_surr = template_matching(data[:, :, 1:10], loc_max_dict, (2, 2, 2), 2)
 ##
-arr, count = SIP_package.template_matching(data[:, :, 1:100], A, 3)
+key = BitVector([0, 0, 0, 0, 1, 1, 0, 0])
+to_visualize = dict_surr[key][1] ./ dict_surr[key][2]
 ##
-aa = arr / count
-for i in 1:9
-	display(Gray.(aa[:, :, i]))
+for i in 1:6
+	display(Gray.(to_visualize[:, :, i]))
 	sleep(0.5)
 end
+
+##
