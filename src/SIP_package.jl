@@ -23,6 +23,7 @@ export
 	numerical_heat_capacity_T,
 	json2dict,
 	jsd,
+	tot_sh_entropy,
 	meg_sampling,
 	get_top_windows,
 	parallel_get_loc_max,
@@ -800,7 +801,7 @@ function json2dict(path2dict::String)
 end
 
 # =========================
-# JSD computation
+# JSD computation and Shannon's entropy
 # =========================
 
 """
@@ -861,6 +862,43 @@ function jsd(dict1, dict2; ϵ = 1e-10)
 	end # key in keys(avg_PD)
 	return jsd
 end # EOF
+
+"""
+tot_sh_entropy
+Computes the Shannon's entropy of a probability distribution.
+INPUT:
+- dict_prob::Dict{BitVector, Integer} -> the dict of counts converted to probability
+
+OUTPUT:
+- tot_sh_entropy::AbstractFloat -> the total Shannon's entropy of the probability distribution
+"""
+
+function tot_sh_entropy(dict_prob::Dict{BitVector, Float32})::Float32
+	sh_entropy = 0
+	for k in keys(dict_prob)
+		sh_entropy -= sing_sh_entropy(dict_prob[k])
+	end # for k in keys(my_dict_prob)
+	return sh_entropy
+end # EOFo
+##
+"""
+sing_sh_entropy
+Computes the Shannon's entropy of a single bin of the histogram. Useful to go through the iterations.
+INPUT:
+- p::AbstractFloat -> the probability of a patch of pixels
+
+OUTPUT:
+- p*log2(p)::AbstractFloat -> to compute the entropy in the sum, or 0 -> if p==0 , by convention, because x goes to 0 quicker than log2(0) to -infinity
+"""
+
+function sing_sh_entropy(p::AbstractFloat)::AbstractFloat
+	if p == 0
+		return 0
+	else
+		return p * log2(p) # the minus is added later
+	end # if p == 0
+end # EOF
+
 
 # =========================
 # MEG COARSE-GRAINING AND SAMPLING
