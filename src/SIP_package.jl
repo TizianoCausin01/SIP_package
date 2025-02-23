@@ -305,14 +305,14 @@ function glider_coarse_g(bin_vid, new_vid, tot_steps, glider_coarse_g_dim, cutof
 	for i_time ∈ time_steps
 		idx_time = i_time:i_time+glider_coarse_g_dim[3]-1 # you have to subtract one, otherwise you will end up getting a bigger glider
 		new_time += 1 # updates the counter accordingly
-		new_rows = 0 # sets the counter of the inner loop to zero s.t. it doesn't overindex
-		for i_rows ∈ rows_steps
-			idx_rows = i_rows:i_rows+glider_coarse_g_dim[1]-1
-			new_rows += 1
-			new_cols = 0 # sets the counter of the inner loop to zero s.t. it doesn't overindex
-			for i_cols ∈ cols_steps
-				idx_cols = i_cols:i_cols+glider_coarse_g_dim[2]-1
-				new_cols += 1
+		new_cols = 0 # sets the counter of the inner loop to zero s.t. it doesn't overindex
+		for i_cols ∈ cols_steps
+			idx_cols = i_cols:i_cols+glider_coarse_g_dim[2]-1
+			new_cols += 1
+			new_rows = 0 # sets the counter of the inner loop to zero s.t. it doesn't overindex
+			for i_rows ∈ rows_steps
+				idx_rows = i_rows:i_rows+glider_coarse_g_dim[1]-1
+				new_rows += 1
 				white_count = sum(bin_vid[idx_rows, idx_cols, idx_time]) # index in video, gets the current window and immediately sums over it. 
 				new_vid[new_rows, new_cols, new_time] = majority_rule(white_count, cutoff) # assigns the pixel of the coarse grained video in the correct position
 			end # cols
@@ -380,10 +380,10 @@ function glider(bin_vid, glider_dim)
 	vid_dim = size(bin_vid)
 	for i_time ∈ 1:vid_dim[3]-glider_dim[3] # step of sampling glider = 1 
 		idx_time = i_time:i_time+glider_dim[3]-1 # you have to subtract one, otherwise you will end up getting a bigger glider
-		for i_rows ∈ 1:vid_dim[1]-glider_dim[1]
-			idx_rows = i_rows:i_rows+glider_dim[1]-1
-			for i_cols ∈ 1:vid_dim[2]-glider_dim[2]
-				idx_cols = i_cols:i_cols+glider_dim[2]-1
+		for i_cols ∈ 1:vid_dim[2]-glider_dim[2]
+			idx_cols = i_cols:i_cols+glider_dim[2]-1
+			for i_rows ∈ 1:vid_dim[1]-glider_dim[1]
+				idx_rows = i_rows:i_rows+glider_dim[1]-1
 				window = view(bin_vid, idx_rows, idx_cols, idx_time) # index in video, gets the current window and immediately vectorizes it. 
 				counts = update_count(counts, vec(window))
 			end # cols
@@ -644,12 +644,12 @@ function template_matching(target_vid::BitArray{3}, loc_max_dict::Dict{BitVector
 	for i_time in (1+extension_surr):((vid_dim[3]+1)-size_win[3]-extension_surr) # +/- bc I don't want to idx outside the video. Since each iteration is the onset of the index, we conclude the iterator at size_pic[1] - size_win[1] - extension_surroundings (s.t. the end of the window is within the pic)
 		lims_time = get_lims(i_time, size_win[3]) # computes the first and last rows of the current iteration of the glider
 		idx_time = lims_time[1]:lims_time[2] # used to idx the rows of the glider
-		for i_rows in (1+extension_surr):((vid_dim[1]+1)-size_win[1]-extension_surr) # +/- bc I don't want to idx outside the video. Since each iteration is the onset of the index, we conclude the iterator at size_pic[1] - size_win[1] - extension_surroundings (s.t. the end of the window is within the pic)
-			lims_rows = get_lims(i_rows, size_win[1]) # computes the first and last rows of the current iteration of the glider
-			idx_rows = lims_rows[1]:lims_rows[2] # used to idx the rows of the glider
-			for i_cols in (1+extension_surr):((vid_dim[2]+1)-size_win[2]-extension_surr) # - 
-				lims_cols = get_lims(i_cols, size_win[2]) # computes the first and last cols of the current iteration of the glider
-				idx_cols = lims_cols[1]:lims_cols[2] # used to idx the cols of the glider
+		for i_cols in (1+extension_surr):((vid_dim[2]+1)-size_win[2]-extension_surr) # - 
+			lims_cols = get_lims(i_cols, size_win[2]) # computes the first and last cols of the current iteration of the glider
+			idx_cols = lims_cols[1]:lims_cols[2] # used to idx the cols of the glider
+			for i_rows in (1+extension_surr):((vid_dim[1]+1)-size_win[1]-extension_surr) # +/- bc I don't want to idx outside the video. Since each iteration is the onset of the index, we conclude the iterator at size_pic[1] - size_win[1] - extension_surroundings (s.t. the end of the window is within the pic)
+				lims_rows = get_lims(i_rows, size_win[1]) # computes the first and last rows of the current iteration of the glider
+				idx_rows = lims_rows[1]:lims_rows[2] # used to idx the rows of the glider
 				current_win = target_vid[idx_rows, idx_cols, idx_time] # index in the array
 				vec_current_win = vec(current_win)
 				if haskey(surr_dict, vec_current_win)
