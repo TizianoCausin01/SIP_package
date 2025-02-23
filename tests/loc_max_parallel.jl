@@ -1,4 +1,5 @@
-# to run this: mpiexec -np 6 julia /Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_package/tests/loc_max_parallel.jl
+# to run this: 
+# mpiexec -np 6 julia /Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_package/tests/loc_max_parallel.jl
 ##
 using Pkg
 cd("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_package/SIP_dev/")
@@ -18,8 +19,10 @@ root = 0
 merger = nproc - 1
 
 num_of_iterations = 5
-file_name = "1917movie"
-results_path = "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/data_repo/SIP_results/$(file_name)_counts"
+file_name = ARGS[1]
+glider_coarse_g_dim = Tuple(parse(Int, ARGS[i]) for i in 2:4)
+glider_dim = Tuple(parse(Int, ARGS[i]) for i in 5:7)
+results_path = "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/data_repo/SIP_results/$(file_name)_counts_cg_$(glider_coarse_g_dim[1])x$(glider_coarse_g_dim[2])x$(glider_coarse_g_dim[3])_win_$(glider_dim[1])x$(glider_dim[2])x$(glider_dim[3])"
 loc_max_path = "$(results_path)/loc_max_$(file_name)"
 
 for iter_idx in 1:num_of_iterations

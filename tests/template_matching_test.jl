@@ -28,3 +28,17 @@ for i in 1:6
 end
 
 ##
+new_dict = mergewith(+, dict_surr, dict_surr)
+##
+loc_max_dict
+##
+for key in keys(loc_max_dict)
+	to_vis = dict_surr[key][1] ./ dict_surr[key][2]
+
+	for i in 1:6
+		display(Gray.(to_vis[:, :, i]))
+		sleep(0.5)
+	end
+end
+##
+to_vis == to_visualize

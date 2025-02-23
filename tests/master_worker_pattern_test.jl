@@ -1,3 +1,4 @@
+# to run mpiexec -np 4 julia tests/master_worker_pattern_test.jl short 3 3 3 2 2 2 # 1st arg=file_name, 2-4 cg_dimensions, 5-7 glider_dimensions
 # use dicts to speed up before real sampling and presend the sizes for preallocation
 ## initialization
 using Pkg
@@ -18,21 +19,22 @@ rank = MPI.Comm_rank(comm) # to establish a unique ID for each process
 nproc = MPI.Comm_size(comm) # to establish the total number of processes used
 root = 0
 merger = nproc - 1
-name_vid = "test_venice_long"
+name_vid = ARGS[1]
 path2original = "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/data_repo/SIP_data/$(name_vid).mp4"
 split_folder = "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/data_repo/SIP_data/$(name_vid)_split"
 split_files = "$(split_folder)/$(name_vid)%03d.mp4"
+results_path = "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/data_repo/SIP_results/"
 # split_folder = "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/data_repo/SIP_results/counts"
 files_names = readdir(split_folder)
 n_tasks = length(files_names) # also the length of it
 tasks = 1:n_tasks
 # vars for sampling
 num_of_iterations = 5 # counting the 0th iteration
-glider_coarse_g_dim = (3, 3, 3) # rows, cols, depth
-glider_dim = (2, 2, 2) # rows, cols, depth
+glider_coarse_g_dim = Tuple(parse(Int, ARGS[i]) for i in 2:4)
+glider_dim = Tuple(parse(Int, ARGS[i]) for i in 5:7) # rows, cols, depth
 ##
 function convert_to_bitvector_dict(str_dict::Dict{String, Any})
-	bitvector_dict = Dict{BitVector, Int64}()
+	bitvector_dict = Dict{BitVector, UInt64}()
 	for (key, value) in str_dict
 		# Check if the key matches the "Bool[...]" pattern
 		if occursin(r"^Bool\[[01, ]+\]$", key)  # Validate the format
@@ -55,7 +57,7 @@ function wrapper_sampling_parallel(video_path, num_of_iterations, glider_coarse_
 	@info "running binarization"
 	bin_vid = whole_video_conversion(video_path) # converts a target yt video into a binarized one
 	# preallocation of dictionaries
-	counts_list = Vector{Dict{BitVector, Int64}}(undef, num_of_iterations) # list of count_dicts of every iteration
+	counts_list = Vector{Dict{BitVector, UInt64}}(undef, num_of_iterations) # list of count_dicts of every iteration
 	# loc_max_list = Vector{Vector{BitVector}}(undef, num_of_iterations) # list of loc_max of every iteration
 	coarse_g_iterations = Vector{BitArray}(undef, num_of_iterations) # list of all the videos at different levels of coarse graining
 	# further variables for coarse-graining
@@ -154,6 +156,16 @@ elseif rank == merger  # I am merger ('ll merge the dicts)
 	end # while task_counter_merger <= n_tasks
 	print(length(tot_dicts))
 	print(typeof(tot_dicts))
+	results_folder = "$(results_path)/$(name_vid)_counts_cg_$(glider_coarse_g_dim[1])x$(glider_coarse_g_dim[2])x$(glider_coarse_g_dim[3])_win_$(glider_dim[1])x$(glider_dim[2])x$(glider_dim[3])"
+	if !isdir(results_folder) # checks if the directory already exists
+		mkpath(results_folder) # if not, it creates the folder where to put the split_files
+	end # if !isdir(dir_path)
+
+	for iter_idx in 1:num_of_iterations
+		open("$(results_folder)/counts_$(name_vid)_iter$(iter_idx).json", "w") do file
+			JSON.print(file, tot_dicts[iter_idx])
+		end # open counts
+	end # for iter_idx in 1:num_of_iterations
 else
 	while true # loops until its broken
 		ismessage, status = MPI.Iprobe(root, rank + 32, comm) # checks if there is a message 
@@ -181,5 +193,6 @@ else
 			end # if current_data[1] != -1
 		end # if ismessage
 	end # while true
+
 end # if rank == root
 print("\n proc $(rank) finished ")
