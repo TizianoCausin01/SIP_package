@@ -683,7 +683,60 @@ function get_lims(i::Int, size_glider::Int)
 	return lims
 end
 
+"""
+vectorize_surrounding_patches
+Vectorizes surrounding patches in the dict of surroundings such that they will be easily readable once stored as .json .
+INPUT:
+- dict_surroundings::Dict{BitVector, Tuple{Array{Integer,3}, Integer}}() -> the dict with the surrounding patches as a 3D array
 
+OUTPUT:
+- dict_surr_vec::Dict{BitVector, Tuple{Vector{Integer}, Integer}} -> the dict with the surrounding patches as a vector
+"""
+
+function vectorize_surrounding_patches(dict_surroundings)::Dict{BitVector, Tuple{Vector{Integer}, Integer}}
+	dict_surr_vec = Dict{BitVector, Tuple{Vector{Integer}, Integer}}()
+	for key in keys(dict_surroundings)
+		curr_vec = vec(dict_surroundings[key][1])
+		dict_surr_vec[key] = (curr_vec, dict_surroundings[key][2])
+	end
+	return dict_surr_vec
+end #EOF
+
+"""
+parse_bitvector
+Function to parse the BitVector keys in the dict storing the surroundings.
+INPUT:
+- key::String -> the string that serves as key in the surroundings Dict after it has been saved as JSON
+
+OUTPUT:
+- BitVector(bool_values)::BitVector -> the original key 
+"""
+function parse_bitvector(key::String)::BitVector
+	# Extract numbers from the string representation of the BitVector
+	bool_values = [c == '1' for c in filter(x -> x in "01", key)] # filter extracts only the 0s and 1s, then creates a Vector{Bool} by comparing them to "1". If "1" == "1" it returns Bool(1) otherwise =="0" it returns Bool{0}
+	return BitVector(bool_values)
+end
+##
+"""
+load_dict_surroudings
+Function to load the dict of surroundings as it was stored.
+First it loads it, then it loops through it, parses the keys and stores the values correctly, and also reshapes the vectorized array
+with the extended window.
+INPUT:
+- path2dict::String -> the path to the surroundings Dict
+- surr_dims::Tuple{3} -> a tuple with the dimensions of the extended patch
+
+OUTPUT:
+- dict_surr::Dict{BitVector, Tuple{Array{UInt64, 3}, Int64}} -> returns the original dictionary
+"""
+
+
+function load_dict_surroudings(path2dict::String, surr_dims::Tuple{3})
+	str_dict = JSON.parsefile(path2dict)
+	# loops through the key=>value pairs, parses the keys, assigns the values to the tuples
+	dict_surr = Dict(parse_bitvector(k) => (UInt.(reshape(v[1], surr_dims)), v[2]) for (k, v) in str_dict)
+	return dict_surr
+end #EOF
 
 # =========================
 # PHYSICAL QUANTITIES    
