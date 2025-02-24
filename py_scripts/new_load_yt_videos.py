@@ -2,7 +2,7 @@
 import yt_dlp
 
 
-def download_video_only(url, output_path="."):
+def download_video_only(url, output_path=".", resolution=1080, fps=30):
     """
     Download only the video stream from a YouTube video
 
@@ -13,7 +13,7 @@ def download_video_only(url, output_path="."):
     # dict with parameters to download the video
     ydl_opts = {
         # Select video-only streams, I could select lower resolutions by doing: "format": "bestvideo[quality=3][ext=mp4]"
-        "format": "bestvideo[ext=mp4]",
+        "format": f"bestvideo[height<={resolution}][fps<={fps}][ext=mp4]",
         # Output template (can customize filename)
         "outtmpl": output_path,
         # Optional: Limit to specific resolutions if desired
@@ -36,9 +36,10 @@ def download_video_only(url, output_path="."):
 path2data = (
     "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/data_repo/SIP_data"
 )
-file_name = "test_longer"
+file_name = "short_4k"
 download_video_only(
-    "https://youtu.be/xviqK0uFx90?si=IcZVe4SDPdDgH0To",
+    "https://youtu.be/TxbE79-1OSI?si=dQqiogoeI893O0ly",
     f"{path2data}/{file_name}.mp4",
 )
 # %%
+# yt-dlp --cookies-from-browser chrome --cookies cookies.txt
