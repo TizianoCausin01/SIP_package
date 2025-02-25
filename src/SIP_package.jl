@@ -720,7 +720,7 @@ function parse_bitvector(key::String)::BitVector
 end
 ##
 """
-load_dict_surroudings
+load_dict_surroundings
 Function to load the dict of surroundings as it was stored.
 First it loads it, then it loops through it, parses the keys and stores the values correctly, and also reshapes the vectorized array
 with the extended window.
@@ -733,7 +733,7 @@ OUTPUT:
 """
 
 
-function load_dict_surroudings(path2dict::String, surr_dims::Tuple{3})
+function load_dict_surroundings(path2dict::String, surr_dims::Tuple{3})
 	str_dict = JSON.parsefile(path2dict)
 	# loops through the key=>value pairs, parses the keys, assigns the values to the tuples
 	dict_surr = Dict(parse_bitvector(k) => (UInt.(reshape(v[1], surr_dims)), v[2]) for (k, v) in str_dict)
