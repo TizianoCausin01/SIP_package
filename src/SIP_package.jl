@@ -27,7 +27,9 @@ export
 	meg_sampling,
 	get_top_windows,
 	parallel_get_loc_max,
-	template_matching
+	template_matching,
+	vectorize_surrounding_patches,
+	load_dict_surroundings
 
 
 
