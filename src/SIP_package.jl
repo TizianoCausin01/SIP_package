@@ -733,7 +733,7 @@ OUTPUT:
 """
 
 
-function load_dict_surroundings(path2dict::String, surr_dims::Tuple{3})
+function load_dict_surroundings(path2dict::String, surr_dims::Tuple{Integer, Integer, Integer})
 	str_dict = JSON.parsefile(path2dict)
 	# loops through the key=>value pairs, parses the keys, assigns the values to the tuples
 	dict_surr = Dict(parse_bitvector(k) => (UInt.(reshape(v[1], surr_dims)), v[2]) for (k, v) in str_dict)
