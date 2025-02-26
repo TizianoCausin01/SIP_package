@@ -9,6 +9,7 @@ Pkg.activate(".")
 using MPI
 using JSON
 using SIP_package
+using Dates
 ##
 # vars for parallel
 MPI.Init()
@@ -18,9 +19,15 @@ nproc = MPI.Comm_size(comm) # to establish the total number of processes used
 root = 0
 merger = nproc - 1
 ##
-name_vid = "test_venice_long"
+if rank == root
+	@info "--------------------- \n \n \n \n \n STARTING TEMPLATE MATCHING \n $(Dates.format(now(), "HH:MM:SS")) \n \n \n \n \n ---------------------"
+end #if rank==root
+##
+name_vid = ARGS[1]
+glider_coarse_g_dim = Tuple(parse(Int, ARGS[i]) for i in 2:4)
+glider_dim = Tuple(parse(Int, ARGS[i]) for i in 5:7)
 split_folder = "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/data_repo/SIP_data/$(name_vid)_split"
-results_path = "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/data_repo/SIP_results/$(name_vid)_counts"
+results_path = "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/data_repo/SIP_results/$(name_vid)_counts_cg_$(glider_coarse_g_dim[1])x$(glider_coarse_g_dim[2])x$(glider_coarse_g_dim[3])_win_$(glider_dim[1])x$(glider_dim[2])x$(glider_dim[3])"
 loc_max_path = "$(results_path)/loc_max_$(name_vid)"
 num_of_iterations = 1
 iter_idx = 1 #add a for loop if I'll need to do more than one iteration
@@ -29,12 +36,10 @@ dict_max_path = "$(loc_max_path)/loc_max_$(name_vid)_iter$(iter_idx).json"
 loc_max_dict = json2dict(dict_max_path)
 ##
 split_files = "$(split_folder)/$(name_vid)%03d.mp4"
-results_path = "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/data_repo/SIP_results/"
-# split_folder = "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/data_repo/SIP_results/counts"
 files_names = readdir(split_folder)
 n_tasks = length(files_names) # also the length of it
 tasks = 1:n_tasks
-glider_dim = (2, 2, 2) # rows, cols, depth
+
 ##
 
 if rank == root # I am root
@@ -82,25 +87,25 @@ elseif rank == merger  # I am merger ('ll merge the dicts)
 				MPI.Wait(dict_arrives) # we have to wait that the dictionary fully arrives before attempting to do anything else
 				if tot_dicts === nothing
 					global tot_dicts = MPI.deserialize(dict_buffer)
-					@info "processed $(task_counter_merger) out of $(n_tasks)"
+					@info "merger: processed $(task_counter_merger) out of $(n_tasks)   $(Dates.format(now(), "HH:MM:SS"))"
 					task_counter_merger += 1
 				else
 					mergewith!(+, tot_dicts, MPI.deserialize(dict_buffer)) # merges the new dict to the tot
 					# global tot_dicts = mergewith!(+, tot_dicts, MPI.deserialize(dict_buffer)) # merges the different dicts from the different iterations together
-					@info "processed $(task_counter_merger) out of $(n_tasks)"
+					@info "merger: processed $(task_counter_merger) out of $(n_tasks)   $(Dates.format(now(), "HH:MM:SS"))"
 					global task_counter_merger += 1
 				end # if isnothing(tot_data)
 			end # if ismessage
 		end # for src in 1:(nproc-2)
 	end # while task_counter_merger <= n_tasks
-	tm_folder = "$(results_path)/$(name_vid)_counts/template_matching_$(name_vid)"
+	tm_folder = "$(results_path)/template_matching_$(name_vid)"
 	if !isdir(tm_folder) # checks if the directory already exists
 		mkpath(tm_folder) # if not, it creates the folder where to put the split_files
 	end # if !isdir(dir_path)
 
 	for iter_idx in 1:num_of_iterations
-		open("$(tm_folder)/template_matching_$(name_vid).json", "w") do file
-			JSON.print(file, tot_dicts)
+		open("$(tm_folder)/template_matching_ext_$(extension_surr)_$(name_vid).json", "w") do file
+			JSON.print(file, vectorize_surrounding_patches(tot_dicts))
 		end # open counts
 	end # for iter_idx in 1:num_of_iterations
 else # I am worker
@@ -111,10 +116,11 @@ else # I am worker
 			MPI.Irecv!(current_data, root, rank + 32, comm) # receives stuff
 			current_data = current_data[1] # takes just the first element of the vector (it's a vector because it's a receive buffer)
 			if current_data != -1 # if the message isn't the termination message
+				@info "proc $(rank): starting binarization   $(Dates.format(now(), "HH:MM:SS"))"
 				bin_vid = whole_video_conversion(joinpath(split_folder, files_names[current_data]))
-				# TO CHANGE LATER
-				bin_vid = bin_vid[:, :, 1:8]
-				current_dict = template_matching(bin_vid, loc_max_dict, glider_dim, extension_surr)
+				@info "proc $(rank): video converted, starting template matching   $(Dates.format(now(), "HH:MM:SS"))"
+				current_dict = template_matching(bin_vid[:, :, 1:10], loc_max_dict, glider_dim, extension_surr)
+				@info "proc $(rank): template matching finished, sending results...   $(Dates.format(now(), "HH:MM:SS"))"
 				serialized_dict = MPI.serialize(current_dict)
 				length_dict = Int32(length(serialized_dict))
 				len_req = MPI.Isend(Ref(length_dict), merger, merger + 64, comm) # sends length of dict to merger for preallocation but with another tag (on another frequency)

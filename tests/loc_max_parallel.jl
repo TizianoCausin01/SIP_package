@@ -9,6 +9,7 @@ Pkg.activate(".")
 using MPI
 using JSON
 using SIP_package
+using Dates
 ##
 # vars for parallel
 MPI.Init()
@@ -17,6 +18,9 @@ rank = MPI.Comm_rank(comm) # to establish a unique ID for each process
 nproc = MPI.Comm_size(comm) # to establish the total number of processes used
 root = 0
 merger = nproc - 1
+if rank == root
+	@info "--------------------- \n \n \n \n \n STARTING LOCAL MAXIMA COMPUTATION \n $(Dates.format(now(), "HH:MM:SS")) \n \n \n \n \n ---------------------"
+end #if rank==root
 
 num_of_iterations = 5
 file_name = ARGS[1]
@@ -70,8 +74,6 @@ for iter_idx in 1:num_of_iterations
 			JSON.print(file, loc_max_dict)
 		end # open counts
 
-		@info "length: $(length(loc_max_dict))"
-		@info "type: $(typeof(loc_max_dict))"
 	else # I am worker
 		global stop = 0
 		while stop != 1 # loops until its broken
