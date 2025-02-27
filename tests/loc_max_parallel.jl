@@ -10,6 +10,7 @@ using MPI
 using JSON
 using SIP_package
 using Dates
+using CodecZlib
 ##
 # vars for parallel
 MPI.Init()
@@ -55,9 +56,11 @@ for iter_idx in 1:num_of_iterations
 					req_len = MPI.Irecv!(length_mex, src, src + 64, comm)
 					MPI.Wait(req_len)
 					array_buffer = Vector{UInt8}(undef, length_mex[1])
-					MPI.Irecv!(array_buffer, src, src + 32, comm)
+					req_mex = MPI.Irecv!(array_buffer, src, src + 32, comm)
+					MPI.Wait(req_mex)
 					if length_mex[1] != 0 # if the process didn't find any loc_max i.e. anything to append
-						max_list = MPI.deserialize(array_buffer)
+						max_list_ser = transcode(ZlibDecompressor, array_buffer)
+						max_list = MPI.deserialize(max_list_ser)
 						append!(tot_list, max_list)
 					end # length_mex[1] != 0
 					global counter_done_procs += 1
@@ -85,10 +88,11 @@ for iter_idx in 1:num_of_iterations
 				loc_max = parallel_get_loc_max(myDict, top_counts, start, jump)
 				# SEND STUFF TO THE ROOT ( you have to serialize the matrix of Bool first)
 				mex = MPI.serialize(loc_max)
-				len_mex = Int32(length(mex))
+				mex_comp = transcode(ZlibCompressor, mex)
+				len_mex = Int32(length(mex_comp))
 				len_req = MPI.Isend(len_mex, root, rank + 64, comm)
 				MPI.Wait(len_req)
-				MPI.Isend(mex, root, rank + 32, comm)
+				MPI.Isend(mex_comp, root, rank + 32, comm)
 				global stop = 1 # to break the while loop
 			end # if ismessage
 		end # while stop != 1
