@@ -10,7 +10,7 @@ using SIP_package
 using MPI
 using JSON
 using Dates
-#const Int = Int32
+using CodecZlib
 
 ##
 # vars for parallel
@@ -37,24 +37,6 @@ glider_dim = Tuple(parse(Int, ARGS[i]) for i in 5:7) # rows, cols, depth
 if rank == root
 	@info "--------------------- \n \n \n \n \n STARTING SAMPLING \n $(Dates.format(now(), "HH:MM:SS")) \n \n \n \n \n ---------------------"
 end #if rank==root
-##
-function convert_to_bitvector_dict(str_dict::Dict{String, Any})
-	bitvector_dict = Dict{BitVector, UInt64}()
-	for (key, value) in str_dict
-		# Check if the key matches the "Bool[...]" pattern
-		if occursin(r"^Bool\[[01, ]+\]$", key)  # Validate the format
-			# Extract the bit sequence inside the square brackets
-			bit_string = replace(key, r"Bool\[" => "", r"\]" => "")  # Remove "Bool[" and "]"
-			bits = split(bit_string, ", ")  # Split into strings
-			# Convert to BitVector and ensure Int32 for values
-			bit_array = parse.(Bool, bits)  # Parse directly to Bool
-			bitvector_dict[BitVector(bit_array)] = Int64(value)
-		else
-			println("Skipping invalid key: $key")
-		end
-	end
-	return bitvector_dict
-end
 
 ##
 function wrapper_sampling_parallel(video_path, num_of_iterations, glider_coarse_g_dim, glider_dim)
@@ -63,7 +45,6 @@ function wrapper_sampling_parallel(video_path, num_of_iterations, glider_coarse_
 	bin_vid = whole_video_conversion(video_path) # converts a target yt video into a binarized one
 	# preallocation of dictionaries
 	counts_list = Vector{Dict{BitVector, UInt64}}(undef, num_of_iterations) # list of count_dicts of every iteration
-	# loc_max_list = Vector{Vector{BitVector}}(undef, num_of_iterations) # list of loc_max of every iteration
 	coarse_g_iterations = Vector{BitArray}(undef, num_of_iterations) # list of all the videos at different levels of coarse graining
 	# further variables for coarse-graining
 	volume = glider_coarse_g_dim[1] * glider_coarse_g_dim[2] * glider_coarse_g_dim[3] #computes the volume of the solid
@@ -141,11 +122,13 @@ elseif rank == merger  # I am merger ('ll merge the dicts)
 				dict_arrives = MPI.Irecv!(dict_buffer, src, rank + 32, comm)
 				MPI.Wait(dict_arrives) # we have to wait that the dictionary fully arrives before attempting to do anything else
 				if tot_dicts === nothing
-					global tot_dicts = MPI.deserialize(dict_buffer)
+					dict_decomp = transcode(ZlibDecompressor, dict_buffer)
+					global tot_dicts = MPI.deserialize(dict_decomp)
 					@info "merger: processed $(task_counter_merger) chunks out of $(n_tasks)   $(Dates.format(now(), "HH:MM:SS"))"
 					task_counter_merger += 1
 				else
-					[mergewith!(+, tot_dicts[iter], MPI.deserialize(dict_buffer)[iter]) for iter in 1:num_of_iterations] # merges the different dicts from the different iterations together
+					dict_decomp = transcode(ZlibDecompressor, dict_buffer)
+					[mergewith!(+, tot_dicts[iter], MPI.deserialize(dict_decomp)[iter]) for iter in 1:num_of_iterations] # merges the different dicts from the different iterations together
 					@info "merger: processed $(task_counter_merger) chunks out of $(n_tasks)   $(Dates.format(now(), "HH:MM:SS"))"
 					global task_counter_merger += 1
 				end # if isnothing(tot_data)
@@ -172,13 +155,12 @@ else
 			current_data = current_data[1] # takes just the first element of the vector (it's a vector because it's a receive buffer)
 			if current_data != -1 # if the message isn't the termination message
 				current_dict = wrapper_sampling_parallel(joinpath(split_folder, files_names[current_data]), num_of_iterations, glider_coarse_g_dim, glider_dim)
-				# JSON_dict = JSON.parsefile(joinpath(split_folder, files_names[current_data]))
-				# current_dict = convert_to_bitvector_dict(JSON_dict)
 				serialized_dict = MPI.serialize(current_dict)
-				length_dict = Int32(length(serialized_dict))
+				dict_comp = transcode(ZlibCompressor, serialized_dict)
+				length_dict = Int32(length(dict_comp))
 				len_req = MPI.Isend(Ref(length_dict), merger, merger + 64, comm) # sends length of dict to merger for preallocation but with another tag (on another frequency)
 				MPI.wait(len_req)
-				dict_req = MPI.Isend(serialized_dict, merger, merger + 32, comm) # sends dict to merger
+				dict_req = MPI.Isend(dict_comp, merger, merger + 32, comm) # sends dict to merger
 				MPI.wait(dict_req)
 				MPI.Isend(0, root, rank + 32, comm) # sends message to root
 			else # if it's -1 
