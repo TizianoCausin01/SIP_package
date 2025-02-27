@@ -10,6 +10,7 @@ using MPI
 using JSON
 using SIP_package
 using Dates
+using CodecZlib
 ##
 # vars for parallel
 MPI.Init()
@@ -81,16 +82,18 @@ elseif rank == merger  # I am merger ('ll merge the dicts)
 			if ismessage & ismessage_len # if there is something to be received
 				length_mex = Vector{Int32}(undef, 1) # preallocates recv buffer
 				req_len = MPI.Irecv!(length_mex, src, rank + 64, comm)
-				dict_buffer = Vector{UInt8}(undef, length_mex[1])
 				MPI.Wait(req_len)
+				dict_buffer = Vector{UInt8}(undef, length_mex[1])
 				dict_arrives = MPI.Irecv!(dict_buffer, src, rank + 32, comm)
 				MPI.Wait(dict_arrives) # we have to wait that the dictionary fully arrives before attempting to do anything else
 				if tot_dicts === nothing
-					global tot_dicts = MPI.deserialize(dict_buffer)
+					dict_ser = transcode(ZlibDecompressor, dict_buffer)
+					global tot_dicts = MPI.deserialize(dict_ser)
 					@info "merger: processed $(task_counter_merger) out of $(n_tasks)   $(Dates.format(now(), "HH:MM:SS"))"
 					task_counter_merger += 1
 				else
-					mergewith!(+, tot_dicts, MPI.deserialize(dict_buffer)) # merges the new dict to the tot
+					dict_ser = transcode(ZlibDecompressor, dict_buffer)
+					mergewith!(+, tot_dicts, MPI.deserialize(dict_ser)) # merges the new dict to the tot
 					# global tot_dicts = mergewith!(+, tot_dicts, MPI.deserialize(dict_buffer)) # merges the different dicts from the different iterations together
 					@info "merger: processed $(task_counter_merger) out of $(n_tasks)   $(Dates.format(now(), "HH:MM:SS"))"
 					global task_counter_merger += 1
@@ -122,10 +125,11 @@ else # I am worker
 				current_dict = template_matching(bin_vid[:, :, 1:10], loc_max_dict, glider_dim, extension_surr)
 				@info "proc $(rank): template matching finished, sending results...   $(Dates.format(now(), "HH:MM:SS"))"
 				serialized_dict = MPI.serialize(current_dict)
-				length_dict = Int32(length(serialized_dict))
+				comp_dict = transcode(ZlibCompressor, serialized_dict)
+				length_dict = Int32(length(comp_dict))
 				len_req = MPI.Isend(Ref(length_dict), merger, merger + 64, comm) # sends length of dict to merger for preallocation but with another tag (on another frequency)
 				MPI.wait(len_req)
-				dict_req = MPI.Isend(serialized_dict, merger, merger + 32, comm) # sends dict to merger
+				dict_req = MPI.Isend(comp_dict, merger, merger + 32, comm) # sends dict to merger
 				MPI.wait(dict_req)
 				MPI.Isend(0, root, rank + 32, comm) # sends message to root
 			else # if it's -1 
