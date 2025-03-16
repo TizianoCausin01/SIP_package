@@ -29,14 +29,15 @@ begin
 	using JSON
 	using PlutoUI
 	using Plots
+	using DelimitedFiles
 end
 
 # ╔═╡ aa232ab8-4b24-45a7-89f0-7e07c6219c45
 begin
     results_path = "/Users/tizianocausin/OneDrive - SISSA/data_repo/SIP_results"
-	file_name = "cenote_caves"
-	cg_dims = (3,3,1)
-	win_dims = (3,3,1)
+	file_name = "emerald_lake"
+	cg_dims = (3,3,3)
+	win_dims = (3,3,2)
 	iterations_num = 5
 end
 
@@ -53,13 +54,19 @@ md"## iteration number"
 # ╔═╡ b0e9b208-0f99-458a-8462-44ad580c6d7a
 @bind iter_idx Slider(1:iterations_num, show_value=true, default=1) 
 
+# ╔═╡ e38daff8-18ee-42f3-950b-edb3614366e2
+md"## print top loc max"
+
+# ╔═╡ 7150ef72-c1db-4294-b87a-ab6e46888362
+@bind top_n Slider(1:60, show_value=true, default=1) 
+
 # ╔═╡ bf8ca8bf-4b66-4e16-a50d-598f54c7f5f6
 begin
     loc_max_iter_path = "$(loc_max_path)/loc_max_$(file_name)_iter$(iter_idx).json"
     loc_max_dict = json2dict(loc_max_iter_path)
 	sorted_loc_max = sort(collect(loc_max_dict), by = x -> x[2], rev = true)
 	loc_max_list = []
-    for (win, _) in sorted_loc_max
+    for (win, _) in sorted_loc_max[1:top_n]
 		target_win = reshape(BitVector(win), win_dims)
 		push!(loc_max_list, Gray.(target_win))
 	end # for key in keys(loc_max_dict)
@@ -73,6 +80,7 @@ begin
             global plot_list = [plot(
             heatmap(el[:, :, frame_idx], color=:grays, axis=false),  # Base heatmap
             ) for el in loc_max_list]  # Enumerate for titles
+		title_plot = plot(title="Overall Title", grid=false, showaxis=false, framestyle=:none)
             plot(plot_list...)  # Adjust layout as needed
 	end every 1 fps=1
 end
@@ -88,7 +96,7 @@ begin
 	loc_max_iter1_path = "$(loc_max_path)/loc_max_$(file_name)_iter1.json"
 	loc_max_dict_iter1 = json2dict(loc_max_iter1_path)
 	sorted_loc_max_iter1 = sort(collect(loc_max_dict_iter1), by = x -> x[2], rev = true)
-	for (key, _) in sorted_loc_max_iter1
+	for (key, _) in sorted_loc_max_iter1[1:top_n]
 		surr_patch = Gray.(surr_dict[key][1]./surr_dict[key][2])
 		push!(surr_list, surr_patch)
 	end # for key in keys(loc_max_dict)
@@ -107,24 +115,37 @@ begin
 end
 
 # ╔═╡ 747f07b6-f6b0-4e91-af96-626f2a06217c
+# ╠═╡ disabled = true
+#=╠═╡
 tot_prob_dicts = [counts2prob(json2dict("$(counts_path)/counts_$(file_name)_iter$(iter).json"),8) for iter in 1:iterations_num]
+  ╠═╡ =#
 
 # ╔═╡ ba2f06ad-6ca9-4822-8c85-f6c481d50708
 md"## Shannon's entropy"
 
-# ╔═╡ d891cff9-9ff6-4860-a975-2f07934764fd
-md"#### coarse-graining iteration" 
-
-# ╔═╡ 279c43b2-559e-4194-9855-7be3633800a9
-@bind iter_idx_sh Slider(1:iterations_num, show_value=true, default=1)
-
-# ╔═╡ b9af233a-91c0-484f-a0d3-e64064726fcc
-tot_sh_entropy(tot_prob_dicts[iter_idx_sh])
+# ╔═╡ 8c84beb4-84ef-4664-8e88-2c58fb454842
+begin
+	sh_ent_path = "$(counts_path)/sh_entropy_$(file_name).csv"
+    sh_ent = readdlm(sh_ent_path, ',')	
+end
 
 # ╔═╡ bba7aa34-15fd-484b-b070-6fa228e6218b
 md"## Shannon-Jensen divergence"
 
+# ╔═╡ db25ac09-9879-4a4b-9a9c-c4730215277e
+begin
+	div_mat_path = "$(counts_path)/jsd_$(file_name).csv"
+	div_mat = readdlm(div_mat_path, ',')
+	hm = heatmap(div_mat, color = reverse(cgrad(:viridis)), clim = (0, maximum(div_mat)), yflip = true, title="$(file_name) cg $(cg_dims[1]) $(cg_dims[2]) $(cg_dims[3]), win $(win_dims[1]) $(win_dims[2]) $(win_dims[3])")
+	for i in 1:size(div_mat, 1), j in 1:size(div_mat, 2)
+		annotate!(i, j, text(round(div_mat[i, j]; digits = 3), 8, :black))
+	end
+	hm
+end
+
 # ╔═╡ f0193922-a846-41e3-9a4f-820bedf6e6d6
+# ╠═╡ disabled = true
+#=╠═╡
 begin
 	div_mat = Array{Any}(undef, iterations_num, iterations_num)
 	for i in 1:iterations_num
@@ -139,6 +160,7 @@ begin
 	end
 	hm
 end
+  ╠═╡ =#
 
 # ╔═╡ Cell order:
 # ╠═a01b91a6-f395-11ef-3f4e-d13822cb03c3
@@ -147,14 +169,15 @@ end
 # ╠═fb35c107-89f6-4567-9df6-cb8a6d9e75e5
 # ╠═3ea45e23-3379-44af-9d9a-337dd76df947
 # ╠═b0e9b208-0f99-458a-8462-44ad580c6d7a
+# ╠═e38daff8-18ee-42f3-950b-edb3614366e2
+# ╠═7150ef72-c1db-4294-b87a-ab6e46888362
 # ╠═bf8ca8bf-4b66-4e16-a50d-598f54c7f5f6
 # ╠═930fdd0b-aa1c-45fc-a7cf-938bc452fd43
 # ╠═d7228c76-3653-477e-9f5f-78daeed3faf8
 # ╠═9aa557c0-6ca8-43e8-9dc6-bfca1add7fed
 # ╠═747f07b6-f6b0-4e91-af96-626f2a06217c
 # ╟─ba2f06ad-6ca9-4822-8c85-f6c481d50708
-# ╟─d891cff9-9ff6-4860-a975-2f07934764fd
-# ╟─279c43b2-559e-4194-9855-7be3633800a9
-# ╠═b9af233a-91c0-484f-a0d3-e64064726fcc
+# ╠═8c84beb4-84ef-4664-8e88-2c58fb454842
 # ╟─bba7aa34-15fd-484b-b070-6fa228e6218b
 # ╠═f0193922-a846-41e3-9a4f-820bedf6e6d6
+# ╠═db25ac09-9879-4a4b-9a9c-c4730215277e
