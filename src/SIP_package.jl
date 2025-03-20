@@ -4,12 +4,11 @@ module SIP_package
 # EXPORTED FUNCTIONS    
 # =========================
 
-export
-	wrapper_sampling,
+export wrapper_sampling,
 	split_vid,
 	video_conversion,
 	whole_video_conversion,
-	get_new_dimensions,
+        get_new_dimensions,
 	get_cutoff,
 	compute_steps_glider,
 	glider_coarse_g,
@@ -17,21 +16,19 @@ export
 	get_nth_window,
 	get_loc_max,
 	plot_loc_max,
-	counts2prob,
+       	counts2prob,
 	prob_at_T,
 	entropy_T,
 	numerical_heat_capacity_T,
 	json2dict,
-	jsd,
-	tot_sh_entropy,
-	meg_sampling,
-	get_top_windows,
+        jsd,
+        tot_sh_entropy,
+        meg_sampling,
+        get_top_windows,
 	parallel_get_loc_max,
-	template_matching,
-	vectorize_surrounding_patches,
+        template_matching,
+        vectorize_surrounding_patches,
 	load_dict_surroundings
-
-
 
 # =========================
 # IMPORTED PACKAGES
@@ -41,12 +38,7 @@ using Images,
 	VideoIO,
 	FFMPEG,
 	Statistics,
-	HDF5,
-	ImageView,
-	GR,
-	Plots,
 	JSON
-
 
 # =========================
 # WRAPPER ALL
@@ -69,7 +61,7 @@ Inputs :
 
 function wrapper_sampling(video_path::String, results_path::String, file_name::String, num_of_iterations::Int, glider_coarse_g_dim::Tuple{Int, Int, Int}, glider_dim::Tuple{Int, Int, Int}, percentile::Int)
 	# video conversion into BitArray
-	bin_vid = whole_video_conversion(video_path) # converts a target yt video into a binarized one
+	bin_vid = video_conversion(video_path) # converts a target yt video into a binarized one
 
 	# sampling and computation of local maxima  
 	# preallocation of dictionaries
@@ -83,24 +75,18 @@ function wrapper_sampling(video_path::String, results_path::String, file_name::S
 	coarse_g_iterations[1] = bin_vid # stores iteration 0
 	for iter_idx ∈ 1:num_of_iterations
 		@info "running iteration $iter_idx"
-		if iter_idx > 0
-			@info "running sampling"
-			@time begin
-				# samples the current iteration
-				counts_list[iter_idx] = glider(coarse_g_iterations[iter_idx], glider_dim) # samples the current iteration
-				loc_max_list[iter_idx] = get_loc_max(counts_list[iter_idx], percentile) # computes the local maxima
-				open("$(results_path)/counts_$(file_name)_iter$(iter_idx).json", "w") do file
-					JSON.print(file, counts_list[iter_idx])
-				end # open counts
-				open("$(results_path)/loc_max_$(file_name)_iter$(iter_idx).json", "w") do file
-					JSON.print(file, loc_max_list[iter_idx])
-				end # open loc_max
-			end #time
-		end # if
-		# coarse-graining of the current iteration
-		if iter_idx < num_of_iterations
-			@info "running coarse-graining"
-			@time begin
+		@time begin	
+			# samples the current iteration
+			counts_list[iter_idx] = glider(coarse_g_iterations[iter_idx], glider_dim) # samples the current iteration
+			loc_max_list[iter_idx] = get_loc_max(counts_list[iter_idx], percentile) # computes the local maxima
+			open("$(results_path)/counts_$(file_name)_iter$(iter_idx).json", "w") do file
+				JSON.print(file, counts_list[iter_idx])
+			end # open counts
+			open("$(results_path)/loc_max_$(file_name)_iter$(iter_idx).json", "w") do file
+	          		JSON.print(file, loc_max_list[iter_idx])
+			end # open loc_max
+			# coarse-graining of the current iteration
+			if iter_idx < num_of_iterations
 				old_dim = size(coarse_g_iterations[iter_idx]) # gets the dimensions of the current iteration
 				new_dim = get_new_dimensions(old_dim, glider_coarse_g_dim) # computes the dimensions of the next iteration
 				# creates a 3D tuple of vectors with the steps the coarse-graining glider will have to do
@@ -115,8 +101,8 @@ function wrapper_sampling(video_path::String, results_path::String, file_name::S
 					glider_coarse_g_dim,
 					cutoff,
 				) # computation of new iteration array
-			end # time
-		end # if 
+			end # if 
+		end # @time
 	end # for
 	return counts_list, loc_max_list
 end # EOF
@@ -158,8 +144,8 @@ function split_vid(path2data::String, file_name::String, segment_duration::Int)
 	end # if !isdir(dir_path)
 
 	cmd = `
-	/opt/homebrew/bin/ffmpeg
-	-i $original_data
+        /leonardo/home/userexternal/tcausin0/bin/ffmpeg
+        -i $original_data
 	-an
 	-c:v copy
 	-f segment
@@ -169,6 +155,8 @@ function split_vid(path2data::String, file_name::String, segment_duration::Int)
 `
 	run(cmd) # runs the command
 end # EOF
+
+
 
 """
 whole_video_conversion
@@ -196,7 +184,10 @@ function whole_video_conversion(path2file::String)::BitArray{3}
 	end # end while !eof(reader)
 	median_value = median(gray_array)
 	@. array_bits = gray_array > median_value # broadcasts the value in the preallocated array
+        return array_bits
 end # EOF
+
+
 
 """
 video_conversion
@@ -457,7 +448,7 @@ Dict{BitVector, Int}
 function get_loc_max(myDict, percentile)
 	loc_max = Vector{BitVector}(undef, 0) # initializes as a vector of BitVectors
 	sorted_counts = sort(collect(myDict), by = x -> x[2], rev = true) # sorts the dictionary of counts according to the values and converts it into a Vector{Pair{}}
-	top_nth = Int(round(length(sorted_counts) * percentile / 100)) # computes the top nth elements
+	top_nth = Int(round(2^length(sorted_counts[1].first) * percentile / 100)) # computes the top nth elements
 	for element in Iterators.take(sorted_counts, top_nth) # loops through the top nth-elements
 		win = element.first # extracts the key
 		max = is_max(myDict, win) # inspects if it's a max
@@ -482,7 +473,7 @@ Output:
 - if it's not : nothing
 """
 function is_max(myDict, win)
-	win_freq = get(myDict, win, -1) # if the key doesn't exists, assign -1
+	win_freq = get(myDict, win, -1) # if the key doesn't exit, assign -1
 	for position ∈ 1:length(win) # changes one element at the time
 		flipped_win = flip_element(win, position) # flips the window element in "position" 
 		if get(myDict, flipped_win, 0) > win_freq # new win might have been not present, that's why we use get 
@@ -530,13 +521,13 @@ function plot_loc_max(loc_max::Array{BitVector}, glider_dim::Tuple, fps_gif::Int
 	theme(:default) # settings to default all Plots.jl parameters 
 	default(background_color = :lightgray) # gray background otherwise patches are not distinguishable
 	array_of_patches = bitVec2imgs(loc_max, glider_dim)
-	@gif for t_idx in 1:glider_dim[3] # t_idx is the temporal idx of the patch
+        for t_idx in 1:glider_dim[3] # t_idx is the temporal idx of the patch
 		plot_list = [Plots.plot(
 			Plots.heatmap(el[:, :, t_idx], color = :grays, axis = false),
 		) for el in array_of_patches]  # Enumerate for titles
 		Plots.plot(plot_list...)  # ... is splat operator (to unpack the elements of plot_list) 
 		# the size of each plot and the layot of the subplots is automatically decided
-	end every 1 fps = fps_gif # @gif for
+	end # for
 end
 
 
@@ -562,7 +553,8 @@ function bitVec2imgs(loc_max, glider_dim)
 		array_of_patches[counter] = patch # stores the new patch
 	end # for el in loc_max
 	return array_of_patches
-end # EOF
+end
+
 
 
 # =========================
@@ -596,13 +588,15 @@ function parallel_get_loc_max(myDict::Dict{BitVector, Int}, top_nth_sorted_count
 	return loc_max # returns the loc_max
 end # EOF
 
+
+
 """
 get_top_windows
 Sorts myDict and keeps only percentile% of it.
 
 INPUT:
 - myDict::Dict{BitVector, Int} -> the dict with the counts
-- percentile::Int -> to select the top percentile% of existing windows (according to the counts)
+- percentile::Int -> to select the top percentile% of windows (according to the counts)
 
 OUTPUT:
 - top_counts::Vector{Pair{BitVector, Int64}} -> the top percentile% counts sorted in decreasing order
@@ -613,6 +607,7 @@ function get_top_windows(myDict::Dict{BitVector, Int}, percentile::Int)::Vector{
 	top_counts = sorted_counts[1:top_nth]
 	return top_counts
 end
+
 
 
 # =========================
@@ -638,6 +633,7 @@ INPUT:
 OUTPUT:
 - surr_dict::Dict{BitVector, Vector{Any}} -> the dict with as keys the local max, as values Vector{Any} [summed_surrounding_pixels, counts_of_occurrences] 
 """
+
 function template_matching(target_vid::BitArray{3}, loc_max_dict::Dict{BitVector, Int}, size_win::Tuple{Integer, Integer, Integer}, extension_surr::Int)
 	# vars for initialization
 	vid_dim = size(target_vid) # size of the video
@@ -685,6 +681,8 @@ function get_lims(i::Int, size_glider::Int)
 	return lims
 end
 
+
+
 """
 vectorize_surrounding_patches
 Vectorizes surrounding patches in the dict of surroundings such that they will be easily readable once stored as .json .
@@ -720,7 +718,7 @@ function parse_bitvector(key::String)::BitVector
 end
 ##
 """
-load_dict_surroundings
+load_dict_surroudings
 Function to load the dict of surroundings as it was stored.
 First it loads it, then it loops through it, parses the keys and stores the values correctly, and also reshapes the vectorized array
 with the extended window.
@@ -733,12 +731,13 @@ OUTPUT:
 """
 
 
-function load_dict_surroundings(path2dict::String, surr_dims::Tuple{Integer, Integer, Integer})
-	str_dict = JSON.parsefile(path2dict)
+function load_dict_surroundings(path2dict::String, surr_dims::Tuple{Integer, Integer, Integer})	
+        str_dict = JSON.parsefile(path2dict)
 	# loops through the key=>value pairs, parses the keys, assigns the values to the tuples
 	dict_surr = Dict(parse_bitvector(k) => (UInt.(reshape(v[1], surr_dims)), v[2]) for (k, v) in str_dict)
 	return dict_surr
 end #EOF
+
 
 # =========================
 # PHYSICAL QUANTITIES    
@@ -823,9 +822,7 @@ function numerical_heat_capacity_T(prob_dict::Dict{BitVector, Float32}, T, appro
 	return heat_capacity
 end
 
-# =========================
-# CHECKPOINTING AND DICT HANDLING 
-# =========================
+
 
 """
 json2dict
@@ -854,6 +851,8 @@ function json2dict(path2dict::String)
 	end
 	return bitvector_dict
 end
+
+
 
 # =========================
 # JSD computation and Shannon's entropy
@@ -906,17 +905,19 @@ OUTPUT:
 - jsd::Float64 -> the result of the above operation
 """
 
-function jsd(dict1, dict2; ϵ = 1e-10)
+function jsd(dict1, dict2; eps = 1e-10)
 	jsd = 0
 	avg_dict = avg_PD(dict1, dict2)
 	for key in keys(avg_dict)
 		val1 = get!(dict1, key, 0)
 		val2 = get!(dict2, key, 0)
-		avg_val = max(avg_dict[key], ϵ) # max ensures that we don't get avg_val = 0 thus causing NaN
+		avg_val = max(avg_dict[key], eps) # max ensures that we don't get avg_val = 0 thus causing NaN
 		jsd += 1 / 2 * (sing_kld(val1, avg_val) + sing_kld(val2, avg_val))
 	end # key in keys(avg_PD)
 	return jsd
 end # EOF
+
+
 
 """
 tot_sh_entropy
@@ -934,8 +935,9 @@ function tot_sh_entropy(dict_prob::Dict{BitVector, Float32})::Float32
 		sh_entropy -= sing_sh_entropy(dict_prob[k])
 	end # for k in keys(my_dict_prob)
 	return sh_entropy
-end # EOFo
-##
+end # EOF
+
+
 """
 sing_sh_entropy
 Computes the Shannon's entropy of a single bin of the histogram. Useful to go through the iterations.
@@ -1089,5 +1091,6 @@ function meg_glider(bin_signal::BitVector, glider_dim::Int)::Dict{BitVector, Int
 	end # time
 	return counts
 end # EOF
+
 
 end # module SIP_package
