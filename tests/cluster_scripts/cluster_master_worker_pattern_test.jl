@@ -40,8 +40,8 @@ end #if rank==root
 function wrapper_sampling_parallel(video_path, num_of_iterations, glider_coarse_g_dim, glider_dim)
 	# video conversion into BitArray
 	@info "proc $(rank): running binarization   $(Dates.format(now(), "HH:MM:SS"))"
-        @info "proc $(rank): free memory $(Sys.free_memory()/1024^3)"
-        @info "proc $(rank): used memory $(Sys.total_memory()/1024^3)"
+        @info "proc $(rank) before sampling: free memory $(Sys.free_memory()/1024^3)"
+        @info "proc $(rank) before sampling: used memory $(Sys.total_memory()/1024^3)"
         flush(stdout)
 	bin_vid = whole_video_conversion(video_path) # converts a target yt video into a binarized one
         # preallocation of dictionaries
@@ -75,6 +75,11 @@ function wrapper_sampling_parallel(video_path, num_of_iterations, glider_coarse_
 			new_vid = nothing
 		end # if 
 	end # for
+        @info "proc $(rank) after sampling: free memory $(Sys.free_memory()/1024^3)"
+        for (key,val) in Base.@locals
+            @info "proc $(rank) inside func: \n $(key): \n size: $(Base.summarysize(val)/1024^3)"
+        end
+        flush(stdout)
 	return counts_list
 end # EOF
 
@@ -130,7 +135,6 @@ elseif rank == merger  # I am merger ('ll merge the dicts)
 					global tot_dicts = MPI.deserialize(dict_decomp)
 					@info "merger: processed $(task_counter_merger) chunks out of $(n_tasks)   $(Dates.format(now(), "HH:MM:SS"))"
                                         @info "merger: free memory $(Sys.free_memory()/1024^3)"
-                                        @info "merger: total memory $(Sys.total_memory()/1024^3)"
                                         flush(stdout)
 					task_counter_merger += 1
 				else
@@ -139,9 +143,11 @@ elseif rank == merger  # I am merger ('ll merge the dicts)
 					@info "merger: processed $(task_counter_merger) chunks out of $(n_tasks)   $(Dates.format(now(), "HH:MM:SS"))"
 					@info "merger: size first dict $(Base.summarysize(tot_dicts[1])/1024^3)Gb"
                                         @info "merger: size all dicts $(Base.summarysize(tot_dicts)/1024^3)Gb"
-                                        @info "merger: free memory $(Sys.free_memory()/1024^3)"
-@info "merger:\n $(varinfo())"                                         
-flush(stdout)
+                                        @info "merger: free memory $(Sys.free_memory()/1024^3)" 
+        for (key,val) in Base.@locals
+            @info "merger: \n $(key): \n size: $(Base.summarysize(val)/1024^3)"
+        end
+        flush(stdout)
                                         global task_counter_merger += 1
 				end # if isnothing(tot_data)
 			end # if ismessage
@@ -172,7 +178,10 @@ else
                                 @info "proc $(rank): serialized dict $(Base.summarysize(serialized_dict)/1024^3)Gb"
 				dict_comp = transcode(ZlibCompressor, serialized_dict)
                                 @info "proc $(rank): compressed dict $(Base.summarysize(dict_comp)/1024^3)Gb"
-                                @info "proc $(rank): \n $(varinfo())"                                         
+                                
+        for (key,val) in Base.@locals
+            @info "proc $(rank) outside func: \n $(key): \n size: $(Base.summarysize(val)/1024^3)"
+        end
                                 flush(stdout)
 				length_dict = Int32(length(dict_comp))
                                 @info "proc $(rank): sent len dict    $(Dates.format(now(), "HH:MM:SS"))"
