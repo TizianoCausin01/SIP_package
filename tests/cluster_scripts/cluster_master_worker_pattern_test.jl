@@ -41,6 +41,7 @@ function wrapper_sampling_parallel(video_path, num_of_iterations, glider_coarse_
 	# video conversion into BitArray
 	@info "proc $(rank): running binarization   $(Dates.format(now(), "HH:MM:SS"))"
         @info "proc $(rank): free memory $(Sys.free_memory()/1024^3)"
+        @info "proc $(rank): used memory $(Sys.total_memory()/1024^3)"
         flush(stdout)
 	bin_vid = whole_video_conversion(video_path) # converts a target yt video into a binarized one
         # preallocation of dictionaries
@@ -129,6 +130,7 @@ elseif rank == merger  # I am merger ('ll merge the dicts)
 					global tot_dicts = MPI.deserialize(dict_decomp)
 					@info "merger: processed $(task_counter_merger) chunks out of $(n_tasks)   $(Dates.format(now(), "HH:MM:SS"))"
                                         @info "merger: free memory $(Sys.free_memory()/1024^3)"
+                                        @info "merger: total memory $(Sys.total_memory()/1024^3)"
                                         flush(stdout)
 					task_counter_merger += 1
 				else
@@ -185,6 +187,5 @@ else
 			end # if current_data[1] != -1
 		end # if ismessage
 	end # while true
-
 end # if rank == root
 @info "proc $(rank) finished"
