@@ -8,7 +8,7 @@ export wrapper_sampling,
 	split_vid,
 	video_conversion,
 	whole_video_conversion,
-        get_new_dimensions,
+	get_new_dimensions,
 	get_cutoff,
 	compute_steps_glider,
 	glider_coarse_g,
@@ -16,19 +16,20 @@ export wrapper_sampling,
 	get_nth_window,
 	get_loc_max,
 	plot_loc_max,
-       	counts2prob,
+	counts2prob,
 	prob_at_T,
 	entropy_T,
 	numerical_heat_capacity_T,
 	json2dict,
-        jsd,
-        tot_sh_entropy,
-        meg_sampling,
-        get_top_windows,
+	jsd,
+	tot_sh_entropy,
+	meg_sampling,
+	get_top_windows,
 	parallel_get_loc_max,
-        template_matching,
-        vectorize_surrounding_patches,
-	load_dict_surroundings
+	template_matching,
+	vectorize_surrounding_patches,
+	load_dict_surroundings,
+	prepare_for_ICA
 
 # =========================
 # IMPORTED PACKAGES
@@ -75,7 +76,7 @@ function wrapper_sampling(video_path::String, results_path::String, file_name::S
 	coarse_g_iterations[1] = bin_vid # stores iteration 0
 	for iter_idx ∈ 1:num_of_iterations
 		@info "running iteration $iter_idx"
-		@time begin	
+		@time begin
 			# samples the current iteration
 			counts_list[iter_idx] = glider(coarse_g_iterations[iter_idx], glider_dim) # samples the current iteration
 			loc_max_list[iter_idx] = get_loc_max(counts_list[iter_idx], percentile) # computes the local maxima
@@ -83,7 +84,7 @@ function wrapper_sampling(video_path::String, results_path::String, file_name::S
 				JSON.print(file, counts_list[iter_idx])
 			end # open counts
 			open("$(results_path)/loc_max_$(file_name)_iter$(iter_idx).json", "w") do file
-	          		JSON.print(file, loc_max_list[iter_idx])
+				JSON.print(file, loc_max_list[iter_idx])
 			end # open loc_max
 			# coarse-graining of the current iteration
 			if iter_idx < num_of_iterations
@@ -144,8 +145,8 @@ function split_vid(path2data::String, file_name::String, segment_duration::Int)
 	end # if !isdir(dir_path)
 
 	cmd = `
-        /leonardo/home/userexternal/tcausin0/bin/ffmpeg
-        -i $original_data
+		/leonardo/home/userexternal/tcausin0/bin/ffmpeg
+		-i $original_data
 	-an
 	-c:v copy
 	-f segment
@@ -184,7 +185,7 @@ function whole_video_conversion(path2file::String)::BitArray{3}
 	end # end while !eof(reader)
 	median_value = median(gray_array)
 	@. array_bits = gray_array > median_value # broadcasts the value in the preallocated array
-        return array_bits
+	return array_bits
 end # EOF
 
 
@@ -521,7 +522,7 @@ function plot_loc_max(loc_max::Array{BitVector}, glider_dim::Tuple, fps_gif::Int
 	theme(:default) # settings to default all Plots.jl parameters 
 	default(background_color = :lightgray) # gray background otherwise patches are not distinguishable
 	array_of_patches = bitVec2imgs(loc_max, glider_dim)
-        for t_idx in 1:glider_dim[3] # t_idx is the temporal idx of the patch
+	for t_idx in 1:glider_dim[3] # t_idx is the temporal idx of the patch
 		plot_list = [Plots.plot(
 			Plots.heatmap(el[:, :, t_idx], color = :grays, axis = false),
 		) for el in array_of_patches]  # Enumerate for titles
@@ -731,8 +732,8 @@ OUTPUT:
 """
 
 
-function load_dict_surroundings(path2dict::String, surr_dims::Tuple{Integer, Integer, Integer})	
-        str_dict = JSON.parsefile(path2dict)
+function load_dict_surroundings(path2dict::String, surr_dims::Tuple{Integer, Integer, Integer})
+	str_dict = JSON.parsefile(path2dict)
 	# loops through the key=>value pairs, parses the keys, assigns the values to the tuples
 	dict_surr = Dict(parse_bitvector(k) => (UInt.(reshape(v[1], surr_dims)), v[2]) for (k, v) in str_dict)
 	return dict_surr
@@ -1092,5 +1093,48 @@ function meg_glider(bin_signal::BitVector, glider_dim::Int)::Dict{BitVector, Int
 	return counts
 end # EOF
 
+
+# =========================
+# MEG COARSE-GRAINING AND SAMPLING
+# =========================
+
+
+"""
+prepare_for_ICA
+Loads the video and prepares it to be the input to ICA. It reads the video and then loops over its frames. 
+It concatenates them and then vectorizes them altogether. Between one batch of frames and the other, it skips
+some frames to avoid the datapoints to be directly one after the other. 
+INPUT:
+- path2file::String -> the path to the file
+- n_vids::Int -> number of datapoints for ICA
+- ratio_denom::Int -> denominator of how much we are gonna resize the video
+- frame_seq::Int -> how many frames we are gonna concatenate for each datapoints
+- frames2skip::Int -> how many frames we are gonna skip between one sample and the other
+
+OUTPUT:
+- vid_array::Array{Float32} -> the datamatrix that'll serve as input for ICA. It's datapts x feats (i.e. vectorized videos x number of pixels)
+"""
+function prepare_for_ICA(path2file::String, n_vids::Int, ratio_denom::Int, frame_seq::Int, frames2skip::Int)::Array{Float32}
+	reader = VideoIO.openvideo(path2file)
+	frame, height, width, depth = get_dimensions(reader)
+	frame_sm = imresize(frame, ratio = 1 / ratio_denom)
+	height_sm, width_sm = size(frame_sm)
+	vid_array = Array{Float32}(undef, n_vids, height_sm * width_sm * frame_seq) # preallocates an array of grayscale values
+	vid_temp = Array{Float32}(undef, height_sm, width_sm, frame_seq) # stores temporarily the frame sequence before vectorizing it
+	#while !eof(reader)
+	for i_vid in 1:n_vids
+		for i_frame in 1:frame_seq
+			frame = VideoIO.read(reader)
+			frame_sm = imresize(frame, ratio = 1 / ratio_denom)
+			vid_temp[:, :, i_frame] = Gray.(frame_sm)
+		end
+		frame_vec = vec(vid_temp)
+		vid_array[i_vid, :] = frame_vec
+		for _ in 1:frames2skip # to have distance across frames
+			VideoIO.read(reader)
+		end
+	end # end while !eof(reader)
+	return vid_array
+end #EOF
 
 end # module SIP_package
