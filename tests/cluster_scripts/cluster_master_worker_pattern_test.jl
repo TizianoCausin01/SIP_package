@@ -138,7 +138,8 @@ elseif rank == merger  # I am merger ('ll merge the dicts)
 					@info "merger: size first dict $(Base.summarysize(tot_dicts[1])/1024^3)Gb"
                                         @info "merger: size all dicts $(Base.summarysize(tot_dicts)/1024^3)Gb"
                                         @info "merger: free memory $(Sys.free_memory()/1024^3)"
-                                        flush(stdout)
+@info "merger:\n $(varinfo())"                                         
+flush(stdout)
                                         global task_counter_merger += 1
 				end # if isnothing(tot_data)
 			end # if ismessage
@@ -169,6 +170,7 @@ else
                                 @info "proc $(rank): serialized dict $(Base.summarysize(serialized_dict)/1024^3)Gb"
 				dict_comp = transcode(ZlibCompressor, serialized_dict)
                                 @info "proc $(rank): compressed dict $(Base.summarysize(dict_comp)/1024^3)Gb"
+                                @info "proc $(rank): \n $(varinfo())"                                         
                                 flush(stdout)
 				length_dict = Int32(length(dict_comp))
                                 @info "proc $(rank): sent len dict    $(Dates.format(now(), "HH:MM:SS"))"
