@@ -29,7 +29,8 @@ export wrapper_sampling,
 	template_matching,
 	vectorize_surrounding_patches,
 	load_dict_surroundings,
-	prepare_for_ICA
+	prepare_for_ICA,
+	get_fps
 
 # =========================
 # IMPORTED PACKAGES
@@ -1136,5 +1137,25 @@ function prepare_for_ICA(path2file::String, n_vids::Int, ratio_denom::Int, frame
 	end # end while !eof(reader)
 	return vid_array
 end #EOF
+
+
+"""
+get_fps
+Function to get_the frame rate of a video in julia. It uses ffmpeg function and converts the output into a Float.
+
+INPUT:
+- video_path::String -> path to the video to analyze
+
+OUTPUT:
+- fps::Float64 -> frame rate of the video
+"""
+function get_fps(video_path::String)::Float64
+	cmd1 = `ffprobe -v error -select_streams v:0 -show_entries stream=r_frame_rate -of default=noprint_wrappers=1:nokey=1 $video_path` # getting the fps as a fraction e.g. 30/1
+	cmd2 = `bc -l` # converting fraction into float
+	seq = pipeline(cmd1, cmd2) # combining the commands with a pipe |
+	out = readchomp(seq) # executes commands and returns the output as a str, then removes \n
+	fps = parse(Float64, out) # converts out from str to Float
+	return fps
+end
 
 end # module SIP_package
