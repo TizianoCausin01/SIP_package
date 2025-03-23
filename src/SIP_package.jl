@@ -1110,20 +1110,21 @@ INPUT:
 - n_vids::Int -> number of datapoints for ICA
 - ratio_denom::Int -> denominator of how much we are gonna resize the video
 - frame_seq::Int -> how many frames we are gonna concatenate for each datapoints
-- frames2skip::Int -> how many frames we are gonna skip between one sample and the other
 
 OUTPUT:
 - vid_array::Array{Float32} -> the datamatrix that'll serve as input for ICA. It's datapts x feats (i.e. vectorized videos x number of pixels)
 """
-function prepare_for_ICA(path2file::String, n_vids::Int, ratio_denom::Int, frame_seq::Int, frames2skip::Int)::Array{Float32}
+function prepare_for_ICA(path2file::String, n_vids::Int, ratio_denom::Int, frame_seq::Int)::Array{Float32}
 	reader = VideoIO.openvideo(path2file)
 	frame, height, width, depth = get_dimensions(reader)
 	frame_sm = imresize(frame, ratio = 1 / ratio_denom)
 	height_sm, width_sm = size(frame_sm)
 	vid_array = Array{Float32}(undef, n_vids, height_sm * width_sm * frame_seq) # preallocates an array of grayscale values
 	vid_temp = Array{Float32}(undef, height_sm, width_sm, frame_seq) # stores temporarily the frame sequence before vectorizing it
-	#while !eof(reader)
+	fps = get_fps(path2file)
 	for i_vid in 1:n_vids
+		frame2go = rand(1:depth-(frame_seq+2)) # draws the initial frame from a uniform distribution of all frames
+		seek(reader, frame2go / fps) # goes at frame n (but since seek accepts secs we are normalizing by the fps)
 		for i_frame in 1:frame_seq
 			frame = VideoIO.read(reader)
 			frame_sm = imresize(frame, ratio = 1 / ratio_denom)
@@ -1131,12 +1132,9 @@ function prepare_for_ICA(path2file::String, n_vids::Int, ratio_denom::Int, frame
 		end
 		frame_vec = vec(vid_temp)
 		vid_array[i_vid, :] = frame_vec
-		for _ in 1:frames2skip # to have distance across frames
-			VideoIO.read(reader)
-		end
 	end # end while !eof(reader)
 	return vid_array
-end #EOF
+end # EOF
 
 
 """
@@ -1149,12 +1147,12 @@ INPUT:
 OUTPUT:
 - fps::Float64 -> frame rate of the video
 """
-function get_fps(video_path::String)::Float64
+function get_fps(video_path::String)::Float32
 	cmd1 = `ffprobe -v error -select_streams v:0 -show_entries stream=r_frame_rate -of default=noprint_wrappers=1:nokey=1 $video_path` # getting the fps as a fraction e.g. 30/1
 	cmd2 = `bc -l` # converting fraction into float
 	seq = pipeline(cmd1, cmd2) # combining the commands with a pipe |
 	out = readchomp(seq) # executes commands and returns the output as a str, then removes \n
-	fps = parse(Float64, out) # converts out from str to Float
+	fps = parse(Float32, out) # converts out from str to Float
 	return fps
 end
 
