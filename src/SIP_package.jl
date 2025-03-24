@@ -1115,13 +1115,13 @@ INPUT:
 OUTPUT:
 - vid_array::Array{Float32} -> the datamatrix that'll serve as input for ICA. It's datapts x feats (i.e. vectorized videos x number of pixels)
 """
-function prepare_for_ICA(path2file::String, n_vids::Int, ratio_denom::Int, frame_seq::Int)::Array{Float32}
+function prepare_for_ICA(path2file::String, n_vids::Int, ratio_denom::Int, frame_seq::Int, tol = 1e-5)::Array{Float64}
 	reader = VideoIO.openvideo(path2file)
 	frame, height, width, depth = get_dimensions(reader)
 	frame_sm = imresize(frame, ratio = 1 / ratio_denom)
 	height_sm, width_sm = size(frame_sm)
-	vid_array = Array{Float32}(undef, n_vids, height_sm * width_sm * frame_seq) # preallocates an array of grayscale values
-	vid_temp = Array{Float32}(undef, height_sm, width_sm, frame_seq) # stores temporarily the frame sequence before vectorizing it
+	vid_array = Array{Float64}(undef, n_vids, height_sm * width_sm * frame_seq) # preallocates an array of grayscale values
+	vid_temp = Array{Float64}(undef, height_sm, width_sm, frame_seq) # stores temporarily the frame sequence before vectorizing it
 	fps = get_fps(path2file)
 	for i_vid in 1:n_vids
 		frame2go = rand(1:depth-(frame_seq+2)) # draws the initial frame from a uniform distribution of all frames
@@ -1134,7 +1134,8 @@ function prepare_for_ICA(path2file::String, n_vids::Int, ratio_denom::Int, frame
 		frame_vec = vec(vid_temp)
 		vid_array[i_vid, :] = frame_vec
 	end # end while !eof(reader)
-	return vid_array
+	whitened_data = centering_whitening(vid_array, tol)
+	return whitened_data
 end # EOF
 
 
@@ -1156,5 +1157,32 @@ function get_fps(video_path::String)::Float32
 	fps = parse(Float32, out) # converts out from str to Float
 	return fps
 end
+
+"""
+centering_whitening
+"""
+function centering_whitening(X, tol)
+	# Center the data (mean subtraction)
+	X_centered = X .- mean(X, dims = 1)
+
+	# Compute the covariance matrix
+	C = cov(X_centered)
+	@info "$(size(C))"
+
+	# Eigen-decomposition of the covariance matrix
+	F = eigen(C)
+	evals = F.values
+	neg_idx = evals .< tol
+	@info "$neg_idx"
+	evals[neg_idx] .= tol
+
+	# Only retain positive eigenvalues (to avoid numerical issues with small negative eigenvalues)
+	evals = abs.(F.values)
+	whitening_matrix = F.vectors * Diagonal(1.0 ./ sqrt.(evals)) * F.vectors'
+	X_whitened = X_centered * whitening_matrix
+
+	return X_whitened
+end
+
 
 end # module SIP_package

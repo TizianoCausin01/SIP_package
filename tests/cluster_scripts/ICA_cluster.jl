@@ -39,7 +39,7 @@ frame_seq = parse(Int, ARGS[5])
 n_comps = parse(Int, ARGS[6])
 ##
 if rank == root # I am root
-        @info "I am root"
+	@info "I am root"
 	task_counter_root = 1 # starts from 1, takes note of the level at which we have arrived
 
 	# initialization
@@ -69,7 +69,7 @@ if rank == root # I am root
 		MPI.Isend(Int32(-1), dst, dst + 32, comm) # signal to stop
 	end # for dst in 1:(nproc-2)
 elseif rank == merger  # I am merger ('ll merge the arrays)
-        @info "I am merger"
+	@info "I am merger"
 	task_counter_merger = 1 # initializes a task counter in the merger, such that I don't have to handle root-merger operations
 	global tot_arrays = nothing
 	while task_counter_merger <= n_chunks # loops over all the processes
@@ -92,14 +92,14 @@ elseif rank == merger  # I am merger ('ll merge the arrays)
 					array_decomp = transcode(ZlibDecompressor, array_buffer)
 					tot_arrays = vcat(tot_arrays, MPI.deserialize(array_decomp))
 					@info "merger: processed $(task_counter_merger) chunks out of $(n_chunks)   $(Dates.format(now(), "HH:MM:SS"))"
-flush(stdout)					
-global task_counter_merger += 1
+					flush(stdout)
+					global task_counter_merger += 1
 				end # if isnothing(tot_data)
 			end # if ismessage
 		end # for src in 1:(nproc-2)
 	end # while task_counter_merger <= n_chunks
-        @info "starting ICA proper"
-	model = MultivariateStats.fit(ICA, tot_arrays, n_comps, maxiter = 1000000, tol=1e-3) # use dot notation because otherwise it's in conflict with the original fit function 
+	@info "starting ICA proper"
+	model = MultivariateStats.fit(ICA, tot_arrays, n_comps, maxiter = 1000000, tol = 1e-3, do_whiten = false) # use dot notation because otherwise it's in conflict with the original fit function 
 	comps = transform(model, tot_arrays)
 	reader2 = VideoIO.openvideo(joinpath(split_folder, files_names[1]))
 	frame1, height1, width1, frame_num = get_dimensions(reader2) # reads one frame to get the dimensions of it resized
@@ -117,10 +117,10 @@ global task_counter_merger += 1
 	#open("$(results_path)/ICs_$(name_vid)_$(tot_n_vids)vids_$(ratio_denom)resize_$(frame_seq)frames.json", "w") do file
 	#	JSON.print(file, vid_comp)
 	# end
-        file2save = "$(results_path)/ICs_$(name_vid)_$(tot_n_vids)vids_$(ratio_denom)resize_$(frame_seq)frames.jls"
-        serialize(file2save, vid_comp)
+	file2save = "$(results_path)/ICs_$(name_vid)_$(tot_n_vids)vids_$(ratio_denom)resize_$(frame_seq)frames.jls"
+	serialize(file2save, vid_comp)
 else # I am worker
-        @info "I am worker"
+	@info "I am worker"
 	while true # loops until its broken
 		ismessage, status = MPI.Iprobe(root, rank + 32, comm) # checks if there is a message 
 		if ismessage # if there is something to receive
