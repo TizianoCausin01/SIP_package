@@ -98,7 +98,7 @@ elseif rank == merger  # I am merger ('ll merge the arrays)
 			end # if ismessage
 		end # for src in 1:(nproc-2)
 	end # while task_counter_merger <= n_chunks
-	whitened_arr = centering_whitening(tot_arrays)
+	whitened_arr = centering_whitening(tot_arrays, 1e-5)
 	@info "starting ICA proper"
 	model = MultivariateStats.fit(ICA, whitened_arr, n_comps, maxiter = 1000000, tol = 1e-3, do_whiten = false) # use dot notation because otherwise it's in conflict with the original fit function 
 	comps = transform(model, whitened_arr)
