@@ -31,7 +31,8 @@ export wrapper_sampling,
 	vectorize_surrounding_patches,
 	load_dict_surroundings,
 	prepare_for_ICA,
-	get_fps
+	get_fps,
+	centering_whitening
 
 # =========================
 # IMPORTED PACKAGES
@@ -41,7 +42,8 @@ using Images,
 	VideoIO,
 	FFMPEG,
 	Statistics,
-	JSON
+	JSON,
+	LinearAlgebra
 
 # =========================
 # WRAPPER ALL
@@ -1134,8 +1136,7 @@ function prepare_for_ICA(path2file::String, n_vids::Int, ratio_denom::Int, frame
 		frame_vec = vec(vid_temp)
 		vid_array[i_vid, :] = frame_vec
 	end # end while !eof(reader)
-	whitened_data = centering_whitening(vid_array, tol)
-	return whitened_data
+	return vid_array
 end # EOF
 
 

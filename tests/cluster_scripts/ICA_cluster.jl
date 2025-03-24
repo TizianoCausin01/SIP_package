@@ -98,9 +98,10 @@ elseif rank == merger  # I am merger ('ll merge the arrays)
 			end # if ismessage
 		end # for src in 1:(nproc-2)
 	end # while task_counter_merger <= n_chunks
+	whitened_arr = centering_whitening(tot_arrays)
 	@info "starting ICA proper"
-	model = MultivariateStats.fit(ICA, tot_arrays, n_comps, maxiter = 1000000, tol = 1e-3, do_whiten = false) # use dot notation because otherwise it's in conflict with the original fit function 
-	comps = transform(model, tot_arrays)
+	model = MultivariateStats.fit(ICA, whitened_arr, n_comps, maxiter = 1000000, tol = 1e-3, do_whiten = false) # use dot notation because otherwise it's in conflict with the original fit function 
+	comps = transform(model, whitened_arr)
 	reader2 = VideoIO.openvideo(joinpath(split_folder, files_names[1]))
 	frame1, height1, width1, frame_num = get_dimensions(reader2) # reads one frame to get the dimensions of it resized
 	frame_sm = imresize(frame1, ratio = 1 / ratio_denom) # resizes the frame
