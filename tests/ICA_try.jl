@@ -20,38 +20,40 @@ frame = VideoIO.read(reader)
 ##
 VideoIO.testvideo(reader)
 ##
-n_vids = 10 # num of samples
+n_vids = 40 # num of samples
 ratio_denom = 50
-frame_seq = 2 # concatenates n frames
-n_comps = 3
-gray_array = prepare_for_ICA(split_files, n_vids, ratio_denom, frame_seq)
+frame_seq = 3 # concatenates n frames
+n_comps = 4
+gray_array_ICA = prepare_for_ICA(split_files, n_vids, ratio_denom, frame_seq)
 ##
-# here ICA wants the datamatrix X as samples x features
-arr_whitened = centering_whitening(gray_array, 1e-10)
+# # here ICA wants the datamatrix X as samples x features
+# arr_whitened = centering_whitening(gray_array, 1e-10)
+
+# ##
+# a = whiten_data(gray_array)
+# ##
+# verify_whitening(a)
+# ##
+# round.(cov(arr_whitened), digits = 2)
+# ##
+# a = rand(10, 10)
+# a_white = centering_whitening(a)
+# @info "$(round.(cov(a_white), digits=0))"
+##
+model = MultivariateStats.fit(ICA, gray_array_ICA, n_comps, maxiter = 100000, tol = 1, do_whiten = true)#, do_whiten = false) # use dot notation because otherwise it's in conflict with the original fit function 
+##
+ICs = model.W
+##
 
 ##
-a = whiten_data(gray_array)
-##
-verify_whitening(a)
-##
-round.(cov(arr_whitened), digits = 2)
-##
-a = rand(10, 10)
-a_white = centering_whitening(a)
-@info "$(round.(cov(a_white), digits=0))"
-##
-model = MultivariateStats.fit(ICA, arr_whitened, n_comps, tol = 1, do_whiten = false)#, do_whiten = false) # use dot notation because otherwise it's in conflict with the original fit function 
-##
-comps = transform(model, gray_array)
-##
 reader = VideoIO.openvideo(split_files)
-frame = VideoIO.read(reader)
+frame = VideoIO.read(reader);
 ##
 height_sm, width_sm = size(imresize(frame, ratio = 1 / ratio_denom))
 ##
-to_vis = Gray.(reshape(comps[3, :], height_sm, width_sm, frame_seq))
+to_vis = Gray.(reshape(ICs[:, 4], height_sm, width_sm, frame_seq))
 for i in 1:frame_seq
-	display(to_vis[:, :, i])
+	display(to_vis[:, :, i] .* 10)
 	sleep(0.5)
 end
 

@@ -1122,7 +1122,7 @@ function prepare_for_ICA(path2file::String, n_vids::Int, ratio_denom::Int, frame
 	frame, height, width, depth = get_dimensions(reader)
 	frame_sm = imresize(frame, ratio = 1 / ratio_denom)
 	height_sm, width_sm = size(frame_sm)
-	vid_array = Array{Float64}(undef, n_vids, height_sm * width_sm * frame_seq) # preallocates an array of grayscale values
+	vid_array = Array{Float64}(undef, height_sm * width_sm * frame_seq, n_vids) # preallocates an array of grayscale values
 	vid_temp = Array{Float64}(undef, height_sm, width_sm, frame_seq) # stores temporarily the frame sequence before vectorizing it
 	fps = get_fps(path2file)
 	for i_vid in 1:n_vids
@@ -1134,7 +1134,7 @@ function prepare_for_ICA(path2file::String, n_vids::Int, ratio_denom::Int, frame
 			vid_temp[:, :, i_frame] = Gray.(frame_sm)
 		end
 		frame_vec = vec(vid_temp)
-		vid_array[i_vid, :] = frame_vec
+		vid_array[:, i_vid] = frame_vec
 	end # end while !eof(reader)
 	return vid_array
 end # EOF
