@@ -12,63 +12,62 @@ using Statistics
 using MultivariateStats
 name_vid = "test_venice_long"
 split_folder = "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/data_repo/SIP_data/$(name_vid)_split"
-split_files = "$(split_folder)/$(name_vid)001.mp4"
+split_files = "$(split_folder)/$(name_vid)002.mp4"
 ##
-##
-seek(reader, 4)
-frame = VideoIO.read(reader)
-##
-VideoIO.testvideo(reader)
-##
-n_vids = 40 # num of samples
-ratio_denom = 50
+n_vids = 300 # num of samples
+ratio_denom = 100
 frame_seq = 3 # concatenates n frames
-n_comps = 4
-gray_array_ICA = prepare_for_ICA(split_files, n_vids, ratio_denom, frame_seq)
+n_comps_ICA = 4
+n_comps_PCA = 30
+gray_array = prepare_for_ICA(split_files, n_vids, ratio_denom, frame_seq)
 ##
-# # here ICA wants the datamatrix X as samples x features
-# arr_whitened = centering_whitening(gray_array, 1e-10)
+# features = size(gray_array)
+# ##
+# model_PCA = MultivariateStats.fit(PCA, gray_array; method = :cov, maxoutdim = features[1])
+# PCs = projection(model_PCA)
+##
+"""
+centering 
+Average across the datapts (axis) to obtain the average of each feature and center the matrix.
+"""
+function centering(X, axis)
+	avg = mean(X, dims = axis)
+	X_cnt = X .- avg
+	return X_cnt, avg
+end #EOF
 
-# ##
-# a = whiten_data(gray_array)
-# ##
-# verify_whitening(a)
-# ##
-# round.(cov(arr_whitened), digits = 2)
-# ##
-# a = rand(10, 10)
-# a_white = centering_whitening(a)
-# @info "$(round.(cov(a_white), digits=0))"
+function pca_wrapper(X, axis, n_comps)
+	X_cnt, avg = centering(X, axis)
+	C = cov(X_cnt')
+	eig = eigen(C)
+	A = eig.vectors[:, 1:n_comps]
+	Y = transpose(A) * X_cnt
+	return A, Y, avg
+end # EOF
+
+function project_back(A, Y, avg)
+	X_hat = A * Y .+ avg
+	return X_hat
+end
+
 ##
-model = MultivariateStats.fit(ICA, gray_array_ICA, n_comps, maxiter = 100000, tol = 1, do_whiten = true)#, do_whiten = false) # use dot notation because otherwise it's in conflict with the original fit function 
-##
-ICs = model.W
-##
+
+A, y, avg = pca_wrapper(gray_array, 2, 30)
+model = MultivariateStats.fit(ICA, y, n_comps, maxiter = 100000, tol = 1e-3, do_whiten = true)#, do_whiten = false) # use dot notation because otherwise it's in conflict with the original fit function 
+ICs = model.W # gets the ICs
+ICs_hat = project_back(A, ICs, avg) # projects the matrix back to R^D
 
 ##
 reader = VideoIO.openvideo(split_files)
 frame = VideoIO.read(reader);
 ##
 height_sm, width_sm = size(imresize(frame, ratio = 1 / ratio_denom))
-##
-to_vis = Gray.(reshape(ICs[:, 4], height_sm, width_sm, frame_seq))
+## to visualize them
+to_vis = Gray.(reshape(ICs_hat[:, 4], height_sm, width_sm, frame_seq))
 for i in 1:frame_seq
-	display(to_vis[:, :, i] .* 10)
+	display(to_vis[:, :, i] * 3) # 10x to enhance contrast 
 	sleep(0.5)
 end
-
-##
-# ICFs = model.W
-vid_comp = Gray.(reshape(comps[2, :], height_sm, width_sm, frame_seq))
-# for i in 1:frame_seq
-# 	display(Gray.(vid_comp[:, :, i]))
-# 	sleep(0.5)
-# end
-##
-##
-using LinearAlgebra
-using Statistics
-
 
 ##
 function centering_whitening(X, tol = 1e-5)
@@ -88,7 +87,7 @@ function centering_whitening(X, tol = 1e-5)
 
 	# Only retain positive eigenvalues (to avoid numerical issues with small negative eigenvalues)
 	evals = abs.(F.values)
-	whitening_matrix = F.vectors * Diagonal(1.0 ./ sqrt.(evals)) * F.vectors'
+	whitening_matrix = Diagonal(1.0 ./ sqrt.(evals)) * F.vectors'
 	X_whitened = X_centered * whitening_matrix
 
 	return X_whitened
