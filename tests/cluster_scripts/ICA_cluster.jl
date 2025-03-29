@@ -90,7 +90,7 @@ elseif rank == merger  # I am merger ('ll merge the arrays)
 					task_counter_merger += 1
 				else
 					array_decomp = transcode(ZlibDecompressor, array_buffer)
-					tot_arrays = vcat(tot_arrays, MPI.deserialize(array_decomp))
+					tot_arrays = hcat(tot_arrays, MPI.deserialize(array_decomp))
 					@info "merger: processed $(task_counter_merger) chunks out of $(n_chunks)   $(Dates.format(now(), "HH:MM:SS"))"
 					flush(stdout)
 					global task_counter_merger += 1
@@ -99,7 +99,7 @@ elseif rank == merger  # I am merger ('ll merge the arrays)
 		end # for src in 1:(nproc-2)
 	end # while task_counter_merger <= n_chunks
 	# whitened_arr = centering_whitening(tot_arrays, 1e-5)
-	@info "starting ICA proper"
+	@info "starting ICA proper, with X of size $(size(tot_arrays))"
 	model = MultivariateStats.fit(ICA, tot_arrays, n_comps, maxiter = 100000000, tol = 1e-3, do_whiten = true) # use dot notation because otherwise it's in conflict with the original fit function 
 	comps = model.W
 	reader2 = VideoIO.openvideo(joinpath(split_folder, files_names[1]))

@@ -100,7 +100,7 @@ elseif rank == merger  # I am merger ('ll merge the arrays)
 	end # while task_counter_merger <= n_chunks
 	# whitened_arr = centering_whitening(tot_arrays, 1e-5)
 	@info "starting PCA proper"
-	model = MultivariateStats.fit(PCA, gray_array'; maxoutdim = n_comps)
+	model = MultivariateStats.fit(PCA, tot_arrays; maxoutdim = n_comps)
 	comps = projection(model)
 	reader2 = VideoIO.openvideo(joinpath(split_folder, files_names[1]))
 	frame1, height1, width1, frame_num = get_dimensions(reader2) # reads one frame to get the dimensions of it resized
