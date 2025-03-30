@@ -233,6 +233,25 @@ function get_dimensions(reader)
 	return frame_1, height, width, frame_num
 end # EOF
 
+"""
+get_frame_count
+To get the total number of frames without reader.counttotalframes, that sometimes doesn't work.
+INPUT:
+- reader::VideoIO.VideoReader{true, VideoIO.SwsTransform, String} -> the reader of the video obtained with VideoIO.openvideo
+
+OUTPUT:
+- frame_count::Int64 -> the number of frames
+
+"""
+function get_frame_count(reader)
+	path_name = reader.avin.io
+	cmd = `ffprobe -v error -select_streams v:0 -count_frames -show_entries stream=nb_read_frames -of csv=p=0 $(path_name)`
+	out = String(read(cmd)) # outputs something like 512,\n
+	cleaned_out = replace(strip(out), "," => "")  # Remove the trailing comma
+	frame_count = parse(Int, cleaned_out) # converts into Int
+	return frame_count
+end # EOF
+
 
 """
 color2BW
