@@ -152,7 +152,9 @@ function split_vid(path2data::String, file_name::String, segment_duration::Int)
 		/leonardo/home/userexternal/tcausin0/bin/ffmpeg
 		-i $original_data
 	-an
-	-c:v copy
+	-c:v libx264
+        -preset fast
+        -flush_packets 1
 	-f segment
 	-segment_time $segment_duration
 	-reset_timestamps 1

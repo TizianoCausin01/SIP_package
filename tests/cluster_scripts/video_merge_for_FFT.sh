@@ -11,6 +11,4 @@ for (( i=${2}+1; i<${2}+${3}; i++ )); do
 done
 name_vid=${vid_dir}/${1}_start${2}_${3}chunks_FFT.mp4
 ffmpeg -f concat -safe 0 -i ${vid_dir}/vid_names_start${2}_${3}chunks_FFT.txt -c copy $name_vid
-fps=$(ffprobe -v error -select_streams v:0 -show_entries stream=avg_frame_rate -of default=noprint_wrappers=1:nokey=1 $name_vid)
-fps=$(echo "scale=2; $fps" | bc -l)
-julia FFT_cluster.jl ${1} ${2} ${3} ${fps}
+julia FFT_cluster.jl ${1} ${2} ${3}

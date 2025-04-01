@@ -40,8 +40,9 @@ end #if rank==root
 function wrapper_sampling_parallel(video_path, num_of_iterations, glider_coarse_g_dim, glider_dim)
 	# video conversion into BitArray
 	@info "proc $(rank): running binarization   $(Dates.format(now(), "HH:MM:SS"))"
+
 	@info "proc $(rank) before sampling: free memory $(Sys.free_memory()/1024^3)"
-	@info "proc $(rank) before sampling: used memory $(Sys.total_memory()/1024^3)"
+	@info "video path: $(video_path)"
 	flush(stdout)
 	bin_vid = whole_video_conversion(video_path) # converts a target yt video into a binarized one
 	# preallocation of dictionaries

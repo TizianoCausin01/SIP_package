@@ -11,18 +11,10 @@ using DelimitedFiles
 name_vid = ARGS[1]
 start = ARGS[2] # the nth time we do this analysis on the same video
 n_chunks = ARGS[3]
-fps = parse(Float64, ARGS[4])  # Convert to a floating-point number
 FFT_folder = "/leonardo_scratch/fast/Sis25_piasini/tcausin/SIP_data/$(name_vid)_FFT/"
 FFT_file = "$(FFT_folder)/$(name_vid)_start$(start)_$(n_chunks)chunks_FFT.mp4"
+fps = get_fps(FFT_file)
 results_folder = "/leonardo_scratch/fast/Sis25_piasini/tcausin/SIP_results/FFTs"
-##
-## since it's not exported from SIP_package
-function get_dimensions(reader)
-	frame_num = VideoIO.counttotalframes(reader) # total number of frames
-	frame_1 = VideoIO.read(reader) # stores the first frame to get the height and width
-	height, width = size(frame_1)
-	return frame_1, height, width, frame_num
-end # EOF
 ##
 reader = VideoIO.openvideo(FFT_file)
 ##
