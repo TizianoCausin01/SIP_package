@@ -7,9 +7,9 @@
 #SBATCH --mem=480G
 #SBATCH --account=Sis25_piasini       # account name
 #SBATCH --partition=boost_usr_prod # partition name
-#SBATCH --job-name=split_bryce_canyon
+#SBATCH --job-name=split_idaho
 #SBATCH --output=/leonardo/home/userexternal/tcausin0/output_jobs/%x.%j.out   # file name will be *job_name*.*job_id*
 
-fn=bryce_canyon
+fn=idaho
 chunk_size=20
 /leonardo/home/userexternal/tcausin0/SIP_package/tests/cluster_scripts/split_vid.sh $fn $chunk_size
