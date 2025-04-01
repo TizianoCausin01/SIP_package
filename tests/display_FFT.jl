@@ -20,56 +20,44 @@ begin
 	using DelimitedFiles
 end
 
-# ╔═╡ 3b7d5f32-538e-4994-909d-52a8e6499e20
-begin
-	vid_name1 = "oregon"
-	start1 = 50
-	n_chunks1 = 5
-	path2file1 = "/Users/tizianocausin/OneDrive - SISSA/data_repo/SIP_results/FFTs/FFT_$(vid_name1)_start$(start1)_$(n_chunks1)chunks.csv"
-	
-	vid_name2 = "cenote_caves"
-	start2 = 15
-	n_chunks2 = 3
-	path2file2 = "/Users/tizianocausin/OneDrive - SISSA/data_repo/SIP_results/FFTs/FFT_$(vid_name2)_start$(start2)_$(n_chunks2)chunks.csv"
+# ╔═╡ a2f288be-1fa1-4dc6-ae08-5208b1be4343
+begin 
+	path2results = "/Users/tizianocausin/OneDrive - SISSA/data_repo/SIP_results/FFTs"
+	vid_names = ["oregon", "cenote_caves", "emerald_lake", "snow_walk", "idaho", "hawaii", "bryce_canyon"]
+	starts = [50, 15, 99, 30, 347, 400, 174]
+	n_chunks = [5, 3, 5, 5, 5, 5, 5] 
+	path2files = ["$(path2results)/FFT_$(vid_names[i_vid])_start$(starts[i_vid])_$(n_chunks[i_vid])chunks.csv" for i_vid in 1:length(vid_names)]
 
-    vid_name3 = "emerald_lake"
-	start3 = 99
-	n_chunks3 = 5
-	path2file3 = "/Users/tizianocausin/OneDrive - SISSA/data_repo/SIP_results/FFTs/FFT_$(vid_name3)_start$(start3)_$(n_chunks3)chunks.csv"
-	
-	
 end
 
-# ╔═╡ 84342d67-e8c1-4d94-bd8d-09f3847af800
-begin
-	FFT1 = readdlm(path2file1, ',');
-	FFT_01 = FFT1[2:end, :];
-		
-	FFT2 = readdlm(path2file2, ',');
-	FFT_02 = FFT2[2:end, :];
-
-	FFT3 = readdlm(path2file3, ',');
-	FFT_03 = FFT3[2:end, :];	
+# ╔═╡ e0219930-d215-45c4-bdd3-7e432d4dbe9f
+begin 
+	FFTs = [readdlm(path2files[i_vid], ',') for i_vid in 1:length(vid_names)]
+	FFTs_0 = [FFTs[i_vid][2:end,:] for i_vid in 1:length(FFTs)]
 end
 
-# ╔═╡ 1f413b16-e99a-4528-b907-146806fd2d00
+# ╔═╡ f543aa8d-6b7c-45c6-817f-14d55d92e8fe
 begin
-	plot(FFT1[:,1], FFT1[:,2], label="$(vid_name1) $(n_chunks1) chunks")
-	plot!(FFT2[:,1], FFT2[:,2], label="$(vid_name2) $(n_chunks2) chunks")
-	plot!(FFT3[:,1], FFT3[:,2], label="$(vid_name3) $(n_chunks3) chunks")
+	p = plot(FFTs[1][:,1], FFTs[1][:,2], label="$(vid_names[1]) $(n_chunks[1]) chunks")
+	for i_vid in 2:length(vid_names)
+		plot!(p, FFTs[i_vid][:,1], FFTs[i_vid][:,2], label="$(vid_names[i_vid]) $(n_chunks[i_vid]) chunks")
+	end
+current()
 end
 
-# ╔═╡ 60a23df7-a0ac-4a6c-8b09-ceffb388c071
+# ╔═╡ ebb71b60-10e6-4c69-ba3e-9175436b7a54
 begin
-	plot(log.(FFT_01[:, 1]), log.(FFT_01[:,2]), label="$(vid_name1) $(n_chunks1) chunks")
-	plot!(log.(FFT_02[:, 1]), log.(FFT_02[:,2]), label="$(vid_name2) $(n_chunks2) chunks")
-	plot!(log.(FFT_03[:, 1]), log.(FFT_03[:,2]), label="$(vid_name3) $(n_chunks3) chunks")
+	log_p = plot(log.(FFTs_0[1][:,1]), log.(FFTs_0[1][:,2]), label="$(vid_names[1]) $(n_chunks[1]) chunks")
+	for i_vid in 2:length(vid_names)
+		plot!(log_p, log.(FFTs_0[i_vid][:,1]), log.(FFTs_0[i_vid][:,2]), label="$(vid_names[i_vid]) $(n_chunks[i_vid]) chunks")
+	end
+	current()
 end
 
 # ╔═╡ Cell order:
 # ╠═0b964fc2-0942-11f0-2aba-1b81563159f4
 # ╠═e9c65c2a-f829-454c-8573-8a776c056fa0
-# ╠═3b7d5f32-538e-4994-909d-52a8e6499e20
-# ╠═84342d67-e8c1-4d94-bd8d-09f3847af800
-# ╠═1f413b16-e99a-4528-b907-146806fd2d00
-# ╠═60a23df7-a0ac-4a6c-8b09-ceffb388c071
+# ╠═a2f288be-1fa1-4dc6-ae08-5208b1be4343
+# ╠═e0219930-d215-45c4-bdd3-7e432d4dbe9f
+# ╠═f543aa8d-6b7c-45c6-817f-14d55d92e8fe
+# ╠═ebb71b60-10e6-4c69-ba3e-9175436b7a54
