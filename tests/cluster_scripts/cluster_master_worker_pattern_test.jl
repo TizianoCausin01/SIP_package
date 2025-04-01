@@ -40,11 +40,11 @@ end #if rank==root
 function wrapper_sampling_parallel(video_path, num_of_iterations, glider_coarse_g_dim, glider_dim)
 	# video conversion into BitArray
 	@info "proc $(rank): running binarization   $(Dates.format(now(), "HH:MM:SS"))"
-        @info "proc $(rank) before sampling: free memory $(Sys.free_memory()/1024^3)"
-        @info "proc $(rank) before sampling: used memory $(Sys.total_memory()/1024^3)"
-        flush(stdout)
+	@info "proc $(rank) before sampling: free memory $(Sys.free_memory()/1024^3)"
+	@info "proc $(rank) before sampling: used memory $(Sys.total_memory()/1024^3)"
+	flush(stdout)
 	bin_vid = whole_video_conversion(video_path) # converts a target yt video into a binarized one
-        # preallocation of dictionaries
+	# preallocation of dictionaries
 	counts_list = Vector{Dict{BitVector, UInt64}}(undef, num_of_iterations) # list of count_dicts of every iteration
 	coarse_g_iterations = Vector{BitArray}(undef, num_of_iterations) # list of all the videos at different levels of coarse graining
 	# further variables for coarse-graining
@@ -75,11 +75,11 @@ function wrapper_sampling_parallel(video_path, num_of_iterations, glider_coarse_
 			new_vid = nothing
 		end # if 
 	end # for
-        @info "proc $(rank) after sampling: free memory $(Sys.free_memory()/1024^3)"
-        for (key,val) in Base.@locals
-            @info "proc $(rank) inside func: \n $(key): \n size: $(Base.summarysize(val)/1024^3)"
-        end
-        flush(stdout)
+	@info "proc $(rank) after sampling: free memory $(Sys.free_memory()/1024^3)"
+	for (key, val) in Base.@locals
+		@info "proc $(rank) inside func: \n $(key): \n size: $(Base.summarysize(val)/1024^3)"
+	end
+	flush(stdout)
 	return counts_list
 end # EOF
 
@@ -123,7 +123,7 @@ elseif rank == merger  # I am merger ('ll merge the dicts)
 			ismessage_len, status = MPI.Iprobe(src, rank + 64, comm)
 			ismessage, status = MPI.Iprobe(src, rank + 32, comm)
 			if ismessage & ismessage_len # if there is something to be received
-                                @info "merger: received dict from $(src)   $(Dates.format(now(), "HH:MM:SS"))"
+				@info "merger: received dict from $(src)   $(Dates.format(now(), "HH:MM:SS"))"
 				length_mex = Vector{Int32}(undef, 1) # preallocates recv buffer
 				req_len = MPI.Irecv!(length_mex, src, rank + 64, comm)
 				dict_buffer = Vector{UInt8}(undef, length_mex[1])
@@ -134,21 +134,21 @@ elseif rank == merger  # I am merger ('ll merge the dicts)
 					dict_decomp = transcode(ZlibDecompressor, dict_buffer)
 					global tot_dicts = MPI.deserialize(dict_decomp)
 					@info "merger: processed $(task_counter_merger) chunks out of $(n_tasks)   $(Dates.format(now(), "HH:MM:SS"))"
-                                        @info "merger: free memory $(Sys.free_memory()/1024^3)"
-                                        flush(stdout)
+					@info "merger: free memory $(Sys.free_memory()/1024^3)"
+					flush(stdout)
 					task_counter_merger += 1
 				else
 					dict_decomp = transcode(ZlibDecompressor, dict_buffer)
 					[mergewith!(+, tot_dicts[iter], MPI.deserialize(dict_decomp)[iter]) for iter in 1:num_of_iterations] # merges the different dicts from the different iterations together
 					@info "merger: processed $(task_counter_merger) chunks out of $(n_tasks)   $(Dates.format(now(), "HH:MM:SS"))"
 					@info "merger: size first dict $(Base.summarysize(tot_dicts[1])/1024^3)Gb"
-                                        @info "merger: size all dicts $(Base.summarysize(tot_dicts)/1024^3)Gb"
-                                        @info "merger: free memory $(Sys.free_memory()/1024^3)" 
-        for (key,val) in Base.@locals
-            @info "merger: \n $(key): \n size: $(Base.summarysize(val)/1024^3)"
-        end
-        flush(stdout)
-                                        global task_counter_merger += 1
+					@info "merger: size all dicts $(Base.summarysize(tot_dicts)/1024^3)Gb"
+					@info "merger: free memory $(Sys.free_memory()/1024^3)"
+					for (key, val) in Base.@locals
+						@info "merger: \n $(key): \n size: $(Base.summarysize(val)/1024^3)"
+					end
+					flush(stdout)
+					global task_counter_merger += 1
 				end # if isnothing(tot_data)
 			end # if ismessage
 		end # for src in 1:(nproc-2)
@@ -174,18 +174,18 @@ else
 			if current_data != -1 # if the message isn't the termination message
 				current_dict = wrapper_sampling_parallel(joinpath(split_folder, files_names[current_data]), num_of_iterations, glider_coarse_g_dim, glider_dim)
 				@info "proc $(rank): real dict $(Base.summarysize(current_dict)/1024^3)Gb"
-                                serialized_dict = MPI.serialize(current_dict)
-                                @info "proc $(rank): serialized dict $(Base.summarysize(serialized_dict)/1024^3)Gb"
+				serialized_dict = MPI.serialize(current_dict)
+				@info "proc $(rank): serialized dict $(Base.summarysize(serialized_dict)/1024^3)Gb"
 				dict_comp = transcode(ZlibCompressor, serialized_dict)
-                                @info "proc $(rank): compressed dict $(Base.summarysize(dict_comp)/1024^3)Gb"
-                                
-        for (key,val) in Base.@locals
-            @info "proc $(rank) outside func: \n $(key): \n size: $(Base.summarysize(val)/1024^3)"
-        end
-                                flush(stdout)
+				@info "proc $(rank): compressed dict $(Base.summarysize(dict_comp)/1024^3)Gb"
+
+				for (key, val) in Base.@locals
+					@info "proc $(rank) outside func: \n $(key): \n size: $(Base.summarysize(val)/1024^3)"
+				end
+				flush(stdout)
 				length_dict = Int32(length(dict_comp))
-                                @info "proc $(rank): sent len dict    $(Dates.format(now(), "HH:MM:SS"))"
-                                flush(stdout)
+				@info "proc $(rank): sent len dict    $(Dates.format(now(), "HH:MM:SS"))"
+				flush(stdout)
 				len_req = MPI.Isend(Ref(length_dict), merger, merger + 64, comm) # sends length of dict to merger for preallocation but with another tag (on another frequency)
 				MPI.wait(len_req)
 				dict_req = MPI.Isend(dict_comp, merger, merger + 32, comm) # sends dict to merger
