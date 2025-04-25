@@ -33,7 +33,7 @@ export wrapper_sampling,
 	prepare_for_ICA,
 	get_fps,
 	centering_whitening,
-	get_steps_convergence
+	mergers_convergence
 
 # =========================
 # IMPORTED PACKAGES
@@ -44,7 +44,8 @@ using Images,
 	FFMPEG,
 	Statistics,
 	JSON,
-	LinearAlgebra
+	LinearAlgebra,
+	MPI
 
 # =========================
 # WRAPPER ALL
@@ -1212,6 +1213,50 @@ end
 # PARALLEL SCRIPTS FUNCTIONS
 # =========================
 
+
+"""
+mergers_convergence
+To converge the dicts onto one process at the end of sampling.
+It does so hierarchically, each oddly-indexed process in the target level receives the dict from the evenly-indexed
+process above and merges it with its dict. Its all based on blocking operations because we need that everybody to move
+with the same rhythm. 
+INPUT:
+- rank::Int -> the rank of the process
+- mergers_arr::Vector{Int} or UnitRange{Int} -> the array with the rank of all the mergers
+- my_dict:: Vector{Dict{BitVector, Int}} -> the array of dicts merged up to now
+- comm -> the comm from MPI
+
+OUTPUT:
+none
+
+
+"""
+function mergers_convergence(rank, mergers_arr, my_dict, comm)
+	levels = get_steps_convergence(mergers_arr)
+	if rank == mergers_arr[1]
+		@info "levels: $(levels)"
+	end # if rank==0
+	for lev in 1:(length(levels)-1) # stops before the last el in levels
+		if in(rank, levels[lev]) # if the process is within the current levels iteration (otherwise it has already sent its dict)
+			if in(rank, levels[lev+1]) # in case it is a receiver (odd-indexed, it will be present also in the nxt step)
+				if rank + 1 <= levels[lev][end] # for the margins, it lets pass only the processes that have someone above, otherwise there is no merging at that step for the margin
+					idx_src = findfirst(rank .== levels[lev]) + 1 # computes the index of the source process (one idx up the idx of the process)
+					new_dict, status = MPI.recv(levels[lev][idx_src], lev, comm) # receives the new dict
+					# FIXME add compression and decompression
+					mergewith!(+, my_dict, new_dict) # FIXME tailor for a vec of dicts
+					@info "rank $(rank): merged with dict from rank $(levels[lev][idx_src])"
+				end # if proc + 1 <= length(mergers) 
+			else
+				idx_dst = findfirst(rank .== levels[lev]) - 1 # finds the idx of the receiver (one idx below its)
+				MPI.send(my_dict, levels[lev][idx_dst], lev, comm) # sends its dict
+			end # if in(rank, lev)
+		end # if in(rank, levels[lev])
+	end # for lev in levels
+	if rank == levels[end][1] # if it's the last process on top of the hierarchy
+		@info "rank $(rank) : $(my_dict)"
+	end # if rank == levels[end][1]
+end # EOF
+
 """
 get_steps_convergence
 Function to get the steps for final convergence across mergers. It works with the indeces of each merger within
@@ -1225,6 +1270,7 @@ OUTPUT:
 - levels::Vector{Vector{Int}} -> a vector containing each step of convergence, e.g. [[0, 1, 2, 3, 4, 5], [0, 2, 4], [0, 4], [0]]
 
 """
+
 function get_steps_convergence(vec)
 	levels = [collect(vec)] # in case arr was a UnitRange{Int64}
 	global count = 0 # count of the level
