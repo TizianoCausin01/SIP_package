@@ -32,7 +32,8 @@ export wrapper_sampling,
 	load_dict_surroundings,
 	prepare_for_ICA,
 	get_fps,
-	centering_whitening
+	centering_whitening,
+	get_steps_convergence
 
 # =========================
 # IMPORTED PACKAGES
@@ -153,8 +154,8 @@ function split_vid(path2data::String, file_name::String, segment_duration::Int)
 		-i $original_data
 	-an
 	-c:v libx264
-        -preset fast
-        -flush_packets 1
+		-preset fast
+		-flush_packets 1
 	-f segment
 	-segment_time $segment_duration
 	-reset_timestamps 1
@@ -1205,6 +1206,37 @@ function centering_whitening(X, tol)
 
 	return X_whitened
 end
+
+
+# =========================
+# PARALLEL SCRIPTS FUNCTIONS
+# =========================
+
+"""
+get_steps_convergence
+Function to get the steps for final convergence across mergers. It works with the indeces of each merger within
+the initial mergers array and the levels afterwards, whatever is the actual number of the process. It creates a tree
+s.t. there is a hierarchical convergence. The idea is that odd indeces receive dicts from even ones and merge them 
+and this is iterated through multiple steps.
+INPUT:
+- vec::Vector{Int} or ::UnitRange{Int} -> the vector of mergers
+
+OUTPUT:
+- levels::Vector{Vector{Int}} -> a vector containing each step of convergence, e.g. [[0, 1, 2, 3, 4, 5], [0, 2, 4], [0, 4], [0]]
+
+"""
+function get_steps_convergence(vec)
+	levels = [collect(vec)] # in case arr was a UnitRange{Int64}
+	global count = 0 # count of the level
+	while length(levels[end]) > 1 # it ends when length(nxt_lvl)==1
+		global count += 1
+		current_lvl = levels[end]
+		idx = 1:2:length(current_lvl) # takes all the odds indeces in current lvl
+		nxt_lvl = current_lvl[idx]
+		push!(levels, nxt_lvl) # updates the levels array
+	end # while length(levels[end]) > 1
+	return levels
+end #EOF
 
 
 end # module SIP_package
