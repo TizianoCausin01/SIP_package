@@ -1233,7 +1233,7 @@ none
 
 
 """
-function mergers_convergence(rank, mergers_arr, my_dict, comm)
+function mergers_convergence(rank, mergers_arr, my_dict, num_of_iterations comm)
 	levels = get_steps_convergence(mergers_arr)
 	if rank == mergers_arr[1]
 		@info "levels: $(levels)"
@@ -1246,7 +1246,7 @@ function mergers_convergence(rank, mergers_arr, my_dict, comm)
 					new_dict, status = MPI.recv(levels[lev][idx_src], lev, comm) # receives the new dict
 					new_dict = transcode(ZlibDecompressor, new_dict)
 					new_dict = MPI.deserialize(new_dict)
-					merge_vec_dicts(my_dict, new_dict, 5)
+					merge_vec_dicts(my_dict, new_dict, num_of_iterations)
 					@info "rank $(rank): merged with dict from rank $(levels[lev][idx_src])"
 				end # if proc + 1 <= length(mergers) 
 			else
