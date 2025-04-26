@@ -25,15 +25,24 @@ workers = (1+mergers[end]):(nproc-1)
 # name_vid = ARGS[1]
 tasks = 1:100
 n_tasks = length(tasks)
+num_of_iterations = 5
 ##
-function generate_rand_dict(size_str, size_dict)
-	my_dict = Dict{BitVector, Int}()
-	for i in 1:size_dict
-		key = BitVector(rand(Bool, size_str))
-		val = rand(1:100)
-		my_dict[key] = val
-	end # for i in 1:size_dict
-	return my_dict
+function generate_rand_dict(size_str, size_dict, num_of_iterations)
+
+	if 2^size_str < size_dict
+		@warn "the possible combinations of bits are less than the desired size of the dictionary"
+	end
+	dicts_vec = []
+	for iter in 1:num_of_iterations
+		my_dict = Dict{BitVector, Int}()
+		for i in 1:size_dict
+			key = BitVector(rand(Bool, size_str))
+			val = rand(1:100)
+			my_dict[key] = val
+		end # for i in 1:size_dict
+		push!(dicts_vec, my_dict)
+	end #for iter in 1:num_of_iterations
+	return dicts_vec
 end # EOF
 ##
 if rank == root # I am root
@@ -42,7 +51,7 @@ if rank == root # I am root
 	task_counter_root = 1 # starts from 1, takes note of the level at which we have arrived
 	# initialization
 	for dst in workers # loops over all the processes other than root (0th) and merger (nproc-1)
-		MPI.Isend(tasks[task_counter_root], dst, dst + 32, comm) # sends the task to each process
+		MPI.Isend(Int32(tasks[task_counter_root]), dst, dst + 32, comm) # sends the task to each process
 		global task_counter_root += 1 # updates the task_counter
 		if task_counter_root > n_tasks # in case the number of processes are more than the number of tasks, we will use less processes (we escape the initialization before)
 			break
@@ -57,7 +66,7 @@ if rank == root # I am root
 				if task_counter_root > n_tasks # in case we surpass n_tasks within the for loop
 					break
 				end # if task_counter > n_tasks
-				MPI.Isend(tasks[task_counter_root], dst, dst + 32, comm) # sends the new task to the free process
+				MPI.Isend(Int32(tasks[task_counter_root]), dst, dst + 32, comm) # sends the new task to the free process
 				global task_counter_root += 1
 				@info "root: $task_counter_root"
 			end # if ismessage
@@ -143,20 +152,20 @@ elseif in(rank, mergers) # I am merger
 					global task_counter_merger += 1
 					MPI.Isend(Int32(1), master_merger, rank + 100, comm)
 				else
-					dict_decomp = transcode(ZlibDecompressor, dict_buffer)
-					mergewith!(+, tot_dicts, MPI.deserialize(dict_decomp))
+					dict_buffer = transcode(ZlibDecompressor, dict_buffer)
+					dict_buffer = MPI.deserialize(dict_buffer)
+                                        merge_vec_dicts(tot_dicts, dict_buffer, num_of_iterations)
 					#[mergewith!(+, tot_dicts[iter], MPI.deserialize(dict_decomp)[iter]) for iter in 1:num_of_iterations] # merges the different dicts from the different iterations together
 					@info "merger $(rank): processed $(task_counter_merger) chunks out of $(n_tasks)   $(Dates.format(now(), "HH:MM:SS"))"
 					flush(stdout)
 					global task_counter_merger += 1
 					@info "merger $(rank) : $task_counter_merger"
-					sleep(1)
 					MPI.Isend(Int32(1), master_merger, rank + 100, comm)
 				end # if isnothing(tot_data)
 			end # if src_worker == -1
 		end # if ismessage
-
 	end # while stop == 0
+mergers_convergence(rank, mergers, tot_dicts, num_of_iterations, comm)
 else # I am worker
 	@info "proc $(rank): I am worker"
 	global stop = 0
@@ -168,7 +177,7 @@ else # I am worker
 			current_data = current_data[1] # takes just the first element of the vector (it's a vector because it's a receive buffer)
 @info "rank $(rank): current_data $(current_data[1])"
 			if current_data != -1 # if the message isn't the termination message
-				current_dict = generate_rand_dict(6, 20)
+				current_dict = generate_rand_dict(6, 20, num_of_iterations)
 				serialized_dict = MPI.serialize(current_dict)
 				dict_comp = transcode(ZlibCompressor, serialized_dict)
 				length_dict = Int32(length(dict_comp))
