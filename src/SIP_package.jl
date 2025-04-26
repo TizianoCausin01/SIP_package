@@ -46,7 +46,8 @@ using Images,
 	Statistics,
 	JSON,
 	LinearAlgebra,
-	MPI
+	MPI,
+	CodecZlib
 
 # =========================
 # WRAPPER ALL
@@ -1243,12 +1244,15 @@ function mergers_convergence(rank, mergers_arr, my_dict, comm)
 				if rank + 1 <= levels[lev][end] # for the margins, it lets pass only the processes that have someone above, otherwise there is no merging at that step for the margin
 					idx_src = findfirst(rank .== levels[lev]) + 1 # computes the index of the source process (one idx up the idx of the process)
 					new_dict, status = MPI.recv(levels[lev][idx_src], lev, comm) # receives the new dict
-					# FIXME add compression and decompression
+					new_dict = transcode(ZlibDecompressor, new_dict)
+					new_dict = MPI.deserialize(new_dict)
 					merge_vec_dicts(my_dict, new_dict, 5)
 					@info "rank $(rank): merged with dict from rank $(levels[lev][idx_src])"
 				end # if proc + 1 <= length(mergers) 
 			else
 				idx_dst = findfirst(rank .== levels[lev]) - 1 # finds the idx of the receiver (one idx below its)
+				my_dict = MPI.serialize(my_dict)
+				my_dict = transcode(ZlibCompressor, my_dict)
 				MPI.send(my_dict, levels[lev][idx_dst], lev, comm) # sends its dict
 			end # if in(rank, lev)
 		end # if in(rank, levels[lev])
