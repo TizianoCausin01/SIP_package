@@ -33,7 +33,8 @@ export wrapper_sampling,
 	prepare_for_ICA,
 	get_fps,
 	centering_whitening,
-	mergers_convergence
+	mergers_convergence,
+	merge_vec_dicts
 
 # =========================
 # IMPORTED PACKAGES
@@ -1243,7 +1244,7 @@ function mergers_convergence(rank, mergers_arr, my_dict, comm)
 					idx_src = findfirst(rank .== levels[lev]) + 1 # computes the index of the source process (one idx up the idx of the process)
 					new_dict, status = MPI.recv(levels[lev][idx_src], lev, comm) # receives the new dict
 					# FIXME add compression and decompression
-					mergewith!(+, my_dict, new_dict) # FIXME tailor for a vec of dicts
+					merge_vec_dicts(my_dict, new_dict, 5)
 					@info "rank $(rank): merged with dict from rank $(levels[lev][idx_src])"
 				end # if proc + 1 <= length(mergers) 
 			else
@@ -1284,5 +1285,20 @@ function get_steps_convergence(vec)
 	return levels
 end #EOF
 
-
+"""
+merge_vec_dicts
+Function to merge vectors of dictionaries together as done before (but without comprehension format).
+Uses mergewith! which is an inplace operator, so tot_dicts is modified and there is no need to assign it
+again to another variable.
+INPUT:
+- tot_dicts::Vector{Dict{BitVector, Int}} -> dictionaries of the merger
+- new_dicts::Vector{Dict{BitVector, Int}} -> dictionaries received by the merger to merge to tot_dicts
+- num_of_iterations::Int -> number of iterations of coarse-graining done
+"""
+function merge_vec_dicts(tot_dicts, new_dicts, num_of_iterations)
+	for iter in 1:num_of_iterations
+		mergewith!(+, tot_dicts[iter], new_dicts[iter])
+	end # for iter in 1:num_of_iterations
+	return tot_dicts
+end # EOF 
 end # module SIP_package
