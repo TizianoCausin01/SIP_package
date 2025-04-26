@@ -1233,7 +1233,7 @@ none
 
 
 """
-function mergers_convergence(rank, mergers_arr, my_dict, num_of_iterations comm)
+function mergers_convergence(rank, mergers_arr, my_dict, num_of_iterations, comm)
 	levels = get_steps_convergence(mergers_arr)
 	if rank == mergers_arr[1]
 		@info "levels: $(levels)"
