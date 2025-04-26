@@ -1233,7 +1233,7 @@ none
 
 
 """
-function mergers_convergence(rank, mergers_arr, my_dict, num_of_iterations, comm)
+function mergers_convergence(rank, mergers_arr, my_dict, num_of_iterations, results_folder, name_vid, comm)
 	levels = get_steps_convergence(mergers_arr)
 	if rank == mergers_arr[1]
 		@info "levels: $(levels)"
@@ -1257,8 +1257,12 @@ function mergers_convergence(rank, mergers_arr, my_dict, num_of_iterations, comm
 			end # if in(rank, lev)
 		end # if in(rank, levels[lev])
 	end # for lev in levels
-	if rank == levels[end][1] # if it's the last process on top of the hierarchy
-		@info "rank $(rank) : $(my_dict)"
+	if rank == levels[end][1] # if it's the last process on top of the hierarchy, saves the dict
+		for iter_idx in 1:num_of_iterations
+			open("$(results_folder)/counts_$(name_vid)_iter$(iter_idx).json", "w") do file # the folder has to be already present 
+				JSON.print(file, my_dict[iter_idx])
+			end # open counts
+		end # for iter_idx in 1:num_of_iterations
 	end # if rank == levels[end][1]
 end # EOF
 
@@ -1300,9 +1304,17 @@ INPUT:
 - num_of_iterations::Int -> number of iterations of coarse-graining done
 """
 function merge_vec_dicts(tot_dicts, new_dicts, num_of_iterations)
-	for iter in 1:num_of_iterations
-		mergewith!(+, tot_dicts[iter], new_dicts[iter])
-	end # for iter in 1:num_of_iterations
-	return tot_dicts
+	if new_dicts == nothing # there is no need for a condition upon tot_dicts because it can't be that the dict lower in the scale should always have something or if it doesn't have anything, the other doesn't have anything too
+		return nothing # dnt care about what the function returns, it actually means nothing since it changes stuff in place
+	# elseif tot_dicts == nothing && new_dicts != nothing
+	# 	return new_dicts
+	# elseif tot_dicts != nothing && new_dicts == nothing
+	# 	return tot_dicts
+	else
+		for iter in 1:num_of_iterations
+			mergewith!(+, tot_dicts[iter], new_dicts[iter])
+		end # for iter in 1:num_of_iterations
+		return tot_dicts
+	end # if tot_dicts==nothing && new_dicts==nothing
 end # EOF 
 end # module SIP_package
