@@ -91,7 +91,7 @@ function wrapper_sampling_parallel(video_path, num_of_iterations, glider_coarse_
 		end # if 
 	end # for
 	@info "rank $(rank) : finished sampling"
-        flush(stdout)
+	flush(stdout)
 	return counts_list
 end # EOF
 
@@ -255,9 +255,14 @@ else # I am worker
 				MPI.Isend(0, root, rank + 32, comm) # sends message to root
 			else # if it's -1 
 				global stop = 1
+				current_dict = nothing
+				serialized_dict = nothing
+				dict_comp = nothing
+				GC.gc()
 			end # if current_data[1] != -1
 		end # if ismessage
 	end # while true
 end # if rank == root
 
 @info "proc $(rank) finished"
+MPI.Finalize()

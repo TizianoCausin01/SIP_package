@@ -13,7 +13,9 @@ comm = MPI.COMM_WORLD
 rank = MPI.Comm_rank(comm) # to establish a unique ID for each process
 nproc = MPI.Comm_size(comm) # to establish the total number of processes used
 mergers = 0:(parse(Int, ARGS[1])-1)
-
+results_folder = "/Users/tizianocausin/OneDrive - SISSA/data_repo/SIP_results"
+name_vid = "prova"
+num_of_iterations = 5
 
 ##
 function generate_rand_dict(size_str, size_dict, num_of_iterations)
@@ -35,6 +37,7 @@ function generate_rand_dict(size_str, size_dict, num_of_iterations)
 end # EOF
 my_dicts = generate_rand_dict(5, 100, 5)
 if in(rank, mergers)
-	mergers_convergence(rank, mergers, my_dicts, comm)
+	mergers_convergence(rank, mergers, my_dicts, num_of_iterations, results_folder, name_vid, comm)
 end # if in(rank, mergers)
 @info "proc $(rank) finished"
+MPI.Finalize()
