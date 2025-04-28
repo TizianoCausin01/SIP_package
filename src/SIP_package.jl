@@ -1235,6 +1235,7 @@ none
 """
 function mergers_convergence(rank, mergers_arr, my_dict, num_of_iterations, results_folder, name_vid, comm)
 	levels = get_steps_convergence(mergers_arr)
+	@info "proc $(rank) before converging: free memory $(Sys.free_memory()/1024^3)"
 	if rank == mergers_arr[1]
 		@info "levels: $(levels)"
 	end # if rank==0
@@ -1258,6 +1259,7 @@ function mergers_convergence(rank, mergers_arr, my_dict, num_of_iterations, resu
 				MPI.send(my_dict, levels[lev][idx_dst], lev, comm) # sends its dict
 				my_dict = nothing
 				GC.gc()
+				@info "proc $(rank) after converging: free memory $(Sys.free_memory()/1024^3)"
 			end # if in(rank, lev)
 		end # if in(rank, levels[lev])
 	end # for lev in levels
