@@ -18,6 +18,7 @@ export wrapper_sampling,
 	get_loc_max,
 	plot_loc_max,
 	get_loc_max_ham,
+	parallel_get_loc_max_ham,
 	counts2prob,
 	prob_at_T,
 	entropy_T,
@@ -612,6 +613,23 @@ function parallel_get_loc_max(myDict::Dict{BitVector, Int}, top_nth_sorted_count
 	for element in Iterators.take(Iterators.drop(top_nth_sorted_counts, start), iterations) # loops through top_nth_sorted_counts from start to start + iterations, if the array finishes before, it ends before
 		win = element.first # extracts the key
 		max = is_max(myDict, win) # inspects if it's a max
+		if ~(max === nothing) # if max exists, updates loc_max
+			push!(loc_max, max)
+		end # if max exists
+	end # for every element
+	return loc_max # returns the loc_max
+end # EOF
+
+function parallel_get_loc_max_ham(myDict, top_nth_sorted_counts, start, iterations, dist_required)
+	loc_max = Vector{BitVector}(undef, 0) # initializes as a vector of BitVectors
+	if dist_required == length(sorted_counts[1].first)
+		@warn "you are just asking for the global maximum"
+	elseif dist_required > length(sorted_counts[1].first)
+		@error "you asked for an hamming distance which is greater than the bitstring itself"
+	end
+	for element in Iterators.take(Iterators.drop(top_nth_sorted_counts, start), iterations) # loops through the top nth-elements
+		win = element.first # extracts the key
+		max = is_max_ham_init(myDict, win, dist_required) # inspects if it's a max
 		if ~(max === nothing) # if max exists, updates loc_max
 			push!(loc_max, max)
 		end # if max exists
