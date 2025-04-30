@@ -17,6 +17,7 @@ export wrapper_sampling,
 	get_nth_window,
 	get_loc_max,
 	plot_loc_max,
+	get_loc_max_ham,
 	counts2prob,
 	prob_at_T,
 	entropy_T,
@@ -639,6 +640,61 @@ function get_top_windows(myDict::Dict{BitVector, Int}, percentile::Int)::Vector{
 end
 
 
+# =========================
+# LOCAL MAXIMA HAM > 1
+# =========================
+
+function get_loc_max_ham(myDict, percentile, dist_required)
+	loc_max = Vector{BitVector}(undef, 0) # initializes as a vector of BitVectors
+	sorted_counts = sort(collect(myDict), by = x -> x[2], rev = true) # sorts the dictionary of counts according to the values and converts it into a Vector{Pair{}}
+	if dist_required == length(sorted_counts[1].first)
+		@warn "you are just asking for the global maximum"
+	elseif dist_required > length(sorted_counts[1].first)
+		@error "you asked for an hamming distance which is greater than the bitstring itself"
+	end
+	top_nth = Int(round(2^length(sorted_counts[1].first) * percentile / 100)) # computes the top nth elements
+	for element in Iterators.take(sorted_counts, top_nth) # loops through the top nth-elements
+		win = element.first # extracts the key
+		max = is_max_ham_init(myDict, win, dist_required) # inspects if it's a max
+		if ~(max === nothing) # if max exists, updates loc_max
+			push!(loc_max, max)
+		end # if max exists
+	end # for every element
+	return loc_max # returns the loc_max
+end # EOF
+function is_max_ham_recursive(myDict, win_freq, flipped_win1, positions_done, dist_required)
+	all_positions = 1:length(flipped_win1)
+	positions_left = setdiff(all_positions, positions_done)
+	for position2 in positions_left
+		flipped_win2 = flip_element(flipped_win1, position2) # flips the window element in "position" 
+		if get(myDict, flipped_win2, 0) > win_freq
+			return false
+		end
+		if length(positions_done) < dist_required
+			state = is_max_ham_recursive(myDict, win_freq, flipped_win2, vcat(positions_done, position2), dist_required)
+			if state == false
+				return false
+			end
+		end # if position_done<dist_required
+	end # for position2 in positions_left
+	return true
+end #EOF
+
+function is_max_ham_init(myDict, win, dist_required)
+	win_freq = get(myDict, win, -1) # if the key doesn't exit, assign -1
+	for position ∈ 1:length(win) # changes one element at the time
+		flipped_win = flip_element(win, position) # flips the window element in "position" 
+		if get(myDict, flipped_win, 0) > win_freq # new win might have been not present, that's why we use get 
+			return nothing # don't include win in local maxima if it breaks the loop (counter<length(win))
+		end # if get(myDict, win, 0) > win_freq
+		state = is_max_ham_recursive(myDict, win_freq, flipped_win, position, dist_required)
+		if state == false
+			return nothing
+		end # if is_max3(myDict, win_freq, flipped_win, position)==false
+
+	end # for position 
+	return win # only if it is a local max
+end # EOF
 
 # =========================
 # TEMPLATE MATCHING
