@@ -622,9 +622,9 @@ end # EOF
 
 function parallel_get_loc_max_ham(myDict, top_nth_sorted_counts, start, iterations, dist_required)
 	loc_max = Vector{BitVector}(undef, 0) # initializes as a vector of BitVectors
-	if dist_required == length(sorted_counts[1].first)
+	if dist_required == length(top_nth_sorted_counts[1].first)
 		@warn "you are just asking for the global maximum"
-	elseif dist_required > length(sorted_counts[1].first)
+	elseif dist_required > length(top_nth_sorted_counts[1].first)
 		@error "you asked for an hamming distance which is greater than the bitstring itself"
 	end
 	for element in Iterators.take(Iterators.drop(top_nth_sorted_counts, start), iterations) # loops through the top nth-elements
