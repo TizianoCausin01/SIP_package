@@ -1,5 +1,5 @@
 using Pkg
-cd("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_package/SIP_dev")
+cd("/leonardo/home/userexternal/tcausin0/virtual_envs/SIP_dev")
 Pkg.activate(".")
 using SIP_package
 using MPI
@@ -30,7 +30,7 @@ end # EOF
 
 function send_large_data(data, dst, tag, comm)
 	size_data = length(data)
-	onsets = collect(0:20:size_data)
+	onsets = collect(0:2000000000:size_data)
 	status = MPI.send(UInt32(length(onsets)), dst, tag, comm)
 	append!(onsets, size_data)
 	@info "onsets $(onsets)"
@@ -65,7 +65,9 @@ function rec_large_data(src, tag, comm)
 end #EOF
 ##
 if rank == 0
-	my_dict = generate_rand_dict(10, 200, 4)
+	# my_dict = generate_rand_dict(10, 200, 4)
+	path2dict = "/leonardo_scratch/fast/Sis25_piasini/tcausin/SIP_results/oregon_counts_cg_3x3x3_win_3x3x3/counts_oregon_iter1.json"
+	my_dict = json2dict(path2dict)
 	my_dict = MPI.serialize(my_dict)
 	my_dict = transcode(ZlibCompressor, my_dict)
 	@info "length sent: $(size(my_dict)) \n type: $(typeof(my_dict))"
@@ -76,5 +78,5 @@ else
 	@info "length received: $(length(dict_rec))"
 	dict_rec = transcode(ZlibDecompressor, dict_rec)
 	dict_rec = MPI.deserialize(dict_rec)
-	@info "$dict_rec"
+	@info "keys: $(length(keys(dict_rec)))"
 end #if rank==0
