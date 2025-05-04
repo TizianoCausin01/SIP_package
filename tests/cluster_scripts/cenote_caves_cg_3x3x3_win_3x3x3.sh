@@ -7,18 +7,18 @@
 #SBATCH --mem=480G
 #SBATCH --account=Sis25_piasini       # account name
 #SBATCH --partition=boost_usr_prod # partition name
-#SBATCH --job-name=snow_walk_cg_3x3x3_win_3x3x3
+#SBATCH --job-name=cenote_caves_cg_3x3x3_win_3x3x3
 #SBATCH --output=/leonardo/home/userexternal/tcausin0/output_jobs/%x.%j.out   # file name will be *job_name*.*job_id*
 
 cd /leonardo/home/userexternal/tcausin0/SIP_package
-fn=snow_walk
+fn=cenote_caves
 cg1=3
 cg2=3
 cg3=3
 win1=3
 win2=3
 win3=3
-mergers_num=10
+mergers_num=7
 module load openmpi
 export JULIA_NUM_THREADS=1
 

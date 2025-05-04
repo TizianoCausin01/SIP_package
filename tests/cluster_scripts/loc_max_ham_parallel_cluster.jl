@@ -27,9 +27,10 @@ num_of_iterations = 5
 file_name = ARGS[1]
 glider_coarse_g_dim = Tuple(parse(Int, ARGS[i]) for i in 2:4)
 glider_dim = Tuple(parse(Int, ARGS[i]) for i in 5:7)
-ham_dist = ARGS[8]
+ham_dist = parse(Int, ARGS[8])
 results_path = "/leonardo_scratch/fast/Sis25_piasini/tcausin/SIP_results/$(file_name)_counts_cg_$(glider_coarse_g_dim[1])x$(glider_coarse_g_dim[2])x$(glider_coarse_g_dim[3])_win_$(glider_dim[1])x$(glider_dim[2])x$(glider_dim[3])"
-loc_max_path = "$(results_path)/loc_max_ham_$(ham_dist)_$(file_name)"
+percentile = 40
+loc_max_path = "$(results_path)/loc_max_ham_$(ham_dist)_$(file_name)_$(percentile)percent"
 
 for iter_idx in 1:num_of_iterations
 	dict_path = "$(results_path)/counts_$(file_name)_iter$(iter_idx).json"
@@ -39,7 +40,6 @@ for iter_idx in 1:num_of_iterations
 	if rank == root
 		@info "iter $(iter_idx) has a dict with $(length(myDict)) keys"
 	end
-	percentile = 10
 	top_counts = get_top_windows(myDict, percentile)
 	tot_counts = length(top_counts)
 	jump = cld(tot_counts, nproc - 1) # performs a ceiling division to equally divide the number of windows among the processes, if we overshoot (because the ceiling approximation surpasses the total number of windows), the processor just skips the for loop inside parallel_get_loc_max
@@ -92,7 +92,9 @@ for iter_idx in 1:num_of_iterations
 				start = Vector{Int32}(undef, 1) # receive buffer
 				MPI.Irecv!(start, root, rank + 32, comm) # receives stuff
 				start = start[1] # takes just the first element of the vector (it's a vector because it's a receive buffer)
-				loc_max = parallel_get_loc_max_ham(myDict, top_counts, start, jump, ham_dist)
+				@info "worker $(rank) starts doing loc_max"
+                                loc_max = parallel_get_loc_max_ham(myDict, top_counts, start, jump, ham_dist)
+				@info "worker $(rank) ended doing loc_max"
 				mex = MPI.serialize(loc_max)
 				mex_comp = transcode(ZlibCompressor, mex)
 				len_mex = Int32(length(mex_comp))
@@ -100,6 +102,7 @@ for iter_idx in 1:num_of_iterations
 				@info "rank $(rank) sends list of length $(len_mex)"
 				MPI.Wait(len_req)
 				MPI.Isend(mex_comp, root, rank + 32, comm)
+                                @info "worker $(rank): sent max"
 				global stop = 1 # to break the while loop
 			end # if ismessage
 		end # while stop != 1
