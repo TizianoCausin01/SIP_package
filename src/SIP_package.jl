@@ -1318,7 +1318,8 @@ function mergers_convergence(rank, mergers_arr, my_dict, num_of_iterations, resu
 			if in(rank, levels[lev+1]) # in case it is a receiver (odd-indexed, it will be present also in the nxt step)
 				if rank + 1 <= levels[lev][end] # for the margins, it lets pass only the processes that have someone above, otherwise there is no merging at that step for the margin
 					idx_src = findfirst(rank .== levels[lev]) + 1 # computes the index of the source process (one idx up the idx of the process)
-					new_dict, status = MPI.recv(levels[lev][idx_src], lev, comm) # receives the new dict
+					# new_dict, status = MPI.recv(levels[lev][idx_src], lev, comm) # receives the new dict
+					new_dict = rec_large_data(levels[lev][idx_src], lev, comm)
 					new_dict = transcode(ZlibDecompressor, new_dict)
 					new_dict = MPI.deserialize(new_dict)
 					merge_vec_dicts(my_dict, new_dict, num_of_iterations)
@@ -1330,7 +1331,8 @@ function mergers_convergence(rank, mergers_arr, my_dict, num_of_iterations, resu
 				idx_dst = findfirst(rank .== levels[lev]) - 1 # finds the idx of the receiver (one idx below its)
 				my_dict = MPI.serialize(my_dict)
 				my_dict = transcode(ZlibCompressor, my_dict)
-				MPI.send(my_dict, levels[lev][idx_dst], lev, comm) # sends its dict
+				# MPI.send(my_dict, levels[lev][idx_dst], lev, comm) # sends its dict
+				send_large_data(my_dict, levels[lev][idx_dst], lev, comm)
 				my_dict = nothing
 				GC.gc()
 				@info "proc $(rank) after converging: free memory $(Sys.free_memory()/1024^3)"
@@ -1397,4 +1399,42 @@ function merge_vec_dicts(tot_dicts, new_dicts, num_of_iterations)
 		return tot_dicts
 	end # if tot_dicts==nothing && new_dicts==nothing
 end # EOF 
+
+
+function send_large_data(data, dst, tag, comm)
+	size_data = length(data)
+	onsets = collect(0:2000000000:size_data)
+	status = MPI.send(UInt32(length(onsets)), dst, tag, comm)
+	append!(onsets, size_data)
+	@info "onsets $(onsets)"
+	count = 0
+	for ichunk in 1:length(onsets)-1
+		chunk = data[onsets[ichunk]+1:onsets[ichunk+1]]
+		count += 1
+		status = MPI.send(chunk, dst, tag + count, comm)
+		@info "sent chunk from $(onsets[ichunk]) to $(onsets[ichunk+1])"
+	end # for ichunk in 1:length(onsets)-1
+	@info "things sent: $(count)"
+end #EOF
+function rec_large_data(src, tag, comm)
+	len_onsets, status = MPI.recv(src, tag, comm)
+	@info "len_onsets $(len_onsets)"
+	if len_onsets == 1
+		tot_steps = 1
+	else
+		tot_steps = len_onsets
+	end # if len_onsets ==1
+	data_rec = Vector{UInt8}()
+	count = 0
+	for ichunk in 1:tot_steps
+		count += 1
+		chunk, status = MPI.recv(src, tag + count, comm)
+		append!(data_rec, chunk)
+		@info "received chunk of size $(length(chunk))"
+		@info "size current data_rec: $(length(data_rec))"
+	end # for ichunk in 1:length_onsets-1
+	@info "things received: $(count)"
+	return data_rec
+end #EOF
+
 end # module SIP_package
