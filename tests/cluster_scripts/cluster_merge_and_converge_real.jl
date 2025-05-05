@@ -217,11 +217,13 @@ elseif in(rank, mergers) # I am merger
 			end # if src_worker == -1
 		end # if ismessage
 	end # while stop == 0
+if isdefined(Main, :tot_dicts) && tot_dicts !== nothing # checkpoints
 	for iter_idx in 1:num_of_iterations
 		open("$(results_folder)/counts_$(name_vid)_iter$(iter_idx)_rank$(rank).json", "w") do file # the folder has to be already present 
 			JSON.print(file, tot_dicts[iter_idx])
 		end # open counts
 	end # for iter_idx in 1:num_of_iterations
+end # if isdefined(Main, :tot_dicts)
 	mergers_convergence(rank, mergers, tot_dicts, num_of_iterations, results_folder, name_vid, comm)
 else # I am worker
 	@info "proc $(rank): I am worker"
