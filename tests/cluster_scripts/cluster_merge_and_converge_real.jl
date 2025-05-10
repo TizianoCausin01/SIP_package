@@ -53,14 +53,12 @@ end #if rank==root
 
 function wrapper_sampling_parallel(video_path, num_of_iterations, glider_coarse_g_dim, glider_dim)
 	# video conversion into BitArray
-	@info "proc $(rank): running binarization   $(Dates.format(now(), "HH:MM:SS"))"
-
-	# @info "proc $(rank) before sampling: free memory $(Sys.free_memory()/1024^3)"
-
+	@info "worker $(rank): running binarization,  free memory $(Sys.free_memory()/1024^3) max size by now: $(Sys.maxrss()/1024^3)    $(Dates.format(now(), "HH:MM:SS"))"
 	flush(stdout)
 	bin_vid = whole_video_conversion(video_path) # converts a target yt video into a binarized one
 	# preallocation of dictionaries
-	counts_list = Vector{Dict{BitVector, UInt64}}(undef, num_of_iterations) # list of count_dicts of every iteration
+        @info "worker $(rank) before sampling: free memory $(Sys.free_memory()/1024^3) max size by now: $(Sys.maxrss()/1024^3)   $(Dates.format(now(), "HH:MM:SS"))"
+counts_list = Vector{Dict{BitVector, UInt64}}(undef, num_of_iterations) # list of count_dicts of every iteration
 	coarse_g_iterations = Vector{BitArray}(undef, num_of_iterations) # list of all the videos at different levels of coarse graining
 	# further variables for coarse-graining
 	volume = glider_coarse_g_dim[1] * glider_coarse_g_dim[2] * glider_coarse_g_dim[3] #computes the volume of the solid
@@ -88,9 +86,12 @@ function wrapper_sampling_parallel(video_path, num_of_iterations, glider_coarse_
 			) # computation of new iteration array
 			old_vid = new_vid
 			new_vid = nothing
-		end # if 
+GC.gc()
+		end # if
+
+	@info "worker $(rank) : iter $(iter_idx), free memory: $(Sys.free_memory()/1024^3), size dict $(Base.summarysize(counts_list)/1024^3), max size by now: $(Sys.maxrss()/1024^3)   $(Dates.format(now(), "HH:MM:SS"))"
 	end # for
-	@info "rank $(rank) : finished sampling"
+	@info "worker $(rank) : finished sampling, free memory: $(Sys.free_memory()/1024^3), size dict $(Base.summarysize(counts_list)/1024^3), max size by now: $(Sys.maxrss()/1024^3)   $(Dates.format(now(), "HH:MM:SS"))"
 	flush(stdout)
 	return counts_list
 end # EOF
@@ -155,7 +156,7 @@ elseif rank == master_merger # I am master merger
 						@info "traffic_light $traffic_light"
 					end # if free_merger == nothing
 				elseif ask == 1 # comes from a merger that has become free
-					@info "master merger received a req from merger $(src)"
+					@info "master merger received a req from merger $(src), free mem: $(Sys.free_memory()/1024^3),  max size by now: $(Sys.maxrss()/1024^3) $(Dates.format(now(), "HH:MM:SS"))"
 					idx_new_free_merger = findfirst(src .== mergers) # takes the index of the merger that is now free
 					@info "new_free_merger $(idx_new_free_merger)"
 					global traffic_light[idx_new_free_merger] = true # makes the merger available
@@ -207,12 +208,16 @@ elseif in(rank, mergers) # I am merger
 					dict_buffer = transcode(ZlibDecompressor, dict_buffer)
 					dict_buffer = MPI.deserialize(dict_buffer)
 					merge_vec_dicts(tot_dicts, dict_buffer, num_of_iterations)
-					#[mergewith!(+, tot_dicts[iter], MPI.deserialize(dict_decomp)[iter]) for iter in 1:num_of_iterations] # merges the different dicts from the different iterations together
 					@info "merger $(rank): processed $(task_counter_merger) chunks out of $(n_tasks)   $(Dates.format(now(), "HH:MM:SS"))"
-					flush(stdout)
 					global task_counter_merger += 1
 					@info "merger $(rank) : $task_counter_merger"
 					MPI.Isend(Int32(1), master_merger, rank + 100, comm)
+dict_buffer = nothing
+                                @info "merger $(rank): free memory $(Sys.free_memory()/1024^3), size dict $((Base.summarysize(tot_dicts))/1024^3), max size by now: $(Sys.maxrss()/1024^3)   $(Dates.format(now(), "HH:MM:SS"))"
+                                GC.gc()
+                                @info "merger $(rank): free memory $(Sys.free_memory()/1024^3), size dict $((Base.summarysize(tot_dicts))/1024^3) after GC, max size by now: $(Sys.maxrss()/1024^3)   $(Dates.format(now(), "HH:MM:SS"))"
+
+					flush(stdout)
 				end # if isnothing(tot_data)
 			end # if src_worker == -1
 		end # if ismessage
@@ -239,9 +244,9 @@ else # I am worker
 			@info "rank $(rank): current_data $(current_data[1])"
 			if current_data != -1 # if the message isn't the termination message
 				current_dict = wrapper_sampling_parallel(joinpath(split_folder, files_names[current_data]), num_of_iterations, glider_coarse_g_dim, glider_dim)
-				serialized_dict = MPI.serialize(current_dict)
-				dict_comp = transcode(ZlibCompressor, serialized_dict)
-				length_dict = Int32(length(dict_comp))
+				current_dict = MPI.serialize(current_dict)
+				current_dict = transcode(ZlibCompressor, current_dict)
+				length_dict = Int32(length(current_dict))
 				no_merger = true
 				while no_merger == true # loops until it gets a free merger (this is because the mergers may be busy)
 					ask_req = MPI.Isend(Int32(0), master_merger, rank + 100, comm) # sends request to master_merger # FIXME it sends the request but the master_merger doesn't receive it
@@ -258,15 +263,18 @@ else # I am worker
 				end # while no_merger == true
 				len_req = MPI.Isend(Ref(length_dict), target_merger, target_merger + 64, comm) # sends length of dict to merger for preallocation but with another tag (on another frequency)
 				MPI.wait(len_req)
-				dict_req = MPI.Isend(dict_comp, target_merger, target_merger + 32, comm) # sends dict to merger
+				dict_req = MPI.Isend(current_dict, target_merger, target_merger + 32, comm) # sends dict to merger
 				MPI.wait(dict_req)
 				@info "worker $(rank) sent mex to $(target_merger)"
 				MPI.Isend(0, root, rank + 32, comm) # sends message to root
+                                @info "worker $(rank): free memory $(Sys.free_memory()/1024^3), size dict $((Base.summarysize(current_dict))/1024^3), max size by now: $(Sys.maxrss()/1024^3)   $(Dates.format(now(), "HH:MM:SS")) "
+                                GC.gc()
+                                @info "worker $(rank): free memory $(Sys.free_memory()/1024^3), size dict $((Base.summarysize(current_dict))/1024^3), max size by now: $(Sys.maxrss()/1024^3)   $(Dates.format(now(), "HH:MM:SS")) after GC"
+
+					flush(stdout)
 			else # if it's -1 
 				global stop = 1
 				current_dict = nothing
-				serialized_dict = nothing
-				dict_comp = nothing
 				GC.gc()
 			end # if current_data[1] != -1
 		end # if ismessage
