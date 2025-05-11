@@ -197,7 +197,9 @@ function whole_video_conversion(path2file::String)::BitArray{3}
 	end # end while !eof(reader)
 	median_value = median(gray_array)
 	@. array_bits = gray_array > median_value # broadcasts the value in the preallocated array
-	return array_bits
+	gray_array=nothing
+        GC.gc()
+        return array_bits
 end # EOF
 
 

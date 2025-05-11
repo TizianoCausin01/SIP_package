@@ -1,23 +1,23 @@
 #!/bin/bash
 
 #SBATCH --nodes=1
-#SBATCH --time=24:00:00
+#SBATCH --time=04:00:00
 #SBATCH --ntasks=32 # number of processes
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=480G
 #SBATCH --account=Sis25_piasini       # account name
 #SBATCH --partition=boost_usr_prod # partition name
-#SBATCH --job-name=oregon_cg_3x3x1_win_3x3x3
+#SBATCH --job-name=15min_cg_3x3x3_win_3x3x3
 #SBATCH --output=/leonardo/home/userexternal/tcausin0/output_jobs/%x.%j.out   # file name will be *job_name*.*job_id*
 
 cd /leonardo/home/userexternal/tcausin0/SIP_package
-fn=oregon
+fn=test_venice_long
 cg1=3
 cg2=3
-cg3=1
-win1=3
-win2=3
-win3=3
+cg3=3
+win1=2
+win2=2
+win3=2
 mergers_num=7
 module load openmpi
 export JULIA_NUM_THREADS=1
