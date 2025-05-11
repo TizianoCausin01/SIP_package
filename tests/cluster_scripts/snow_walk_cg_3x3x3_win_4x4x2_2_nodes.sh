@@ -1,11 +1,11 @@
 #!/bin/bash
 
-#SBATCH --nodes=2
+#SBATCH --nodes=3
 #SBATCH --time=24:00:00
-#SBATCH --ntasks=40 # number of processes
+#SBATCH --ntasks=45 # number of processes
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=0
-#SBATCH --ntasks-per-node=20
+#SBATCH --ntasks-per-node=15
 #SBATCH --account=Sis25_piasini       # account name
 #SBATCH --partition=boost_usr_prod # partition name
 #SBATCH --job-name=snow_walk_cg_3x3x3_win_4x4x2_2_nodes
@@ -19,7 +19,7 @@ cg3=3
 win1=4
 win2=4
 win3=2
-n_mergers=10
+n_mergers=15
 module load openmpi
 export JULIA_NUM_THREADS=1
 
