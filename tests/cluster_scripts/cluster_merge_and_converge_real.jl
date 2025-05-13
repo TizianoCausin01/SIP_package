@@ -53,13 +53,14 @@ end #if rank==root
 
 function wrapper_sampling_parallel(video_path, num_of_iterations, glider_coarse_g_dim, glider_dim)
 	# video conversion into BitArray
-	@info "proc $(rank): running binarization   $(Dates.format(now(), "HH:MM:SS"))"
-
+@info "worker $(rank): running binarization,  free memory $(Sys.free_memory()/1024^3) max size by now: $(Sys.maxrss()/1024^3)    $(Dates.format(now(), "HH:MM:SS"))"
+    
 	# @info "proc $(rank) before sampling: free memory $(Sys.free_memory()/1024^3)"
 
 	flush(stdout)
 	bin_vid = whole_video_conversion(video_path) # converts a target yt video into a binarized one
-	# preallocation of dictionaries
+@info "worker $(rank) before sampling: free memory $(Sys.free_memory()/1024^3) max size by now: $(Sys.maxrss()/1024^3)   $(Dates.format(now(), "HH:MM:SS"))"
+# preallocation of dictionaries
 	counts_list = Vector{Dict{BitVector, UInt64}}(undef, num_of_iterations) # list of count_dicts of every iteration
 	coarse_g_iterations = Vector{BitArray}(undef, num_of_iterations) # list of all the videos at different levels of coarse graining
 	# further variables for coarse-graining
@@ -88,9 +89,10 @@ function wrapper_sampling_parallel(video_path, num_of_iterations, glider_coarse_
 			) # computation of new iteration array
 			old_vid = new_vid
 			new_vid = nothing
-		end # if 
+		end # if
+@info "worker $(rank) : iter $(iter_idx), free memory: $(Sys.free_memory()/1024^3), size dict $(Base.summarysize(counts_list)/1024^3), max size by now: $(Sys.maxrss()/1024^3)   $(Dates.format(now(), "HH:MM:SS"))"
 	end # for
-	@info "rank $(rank) : finished sampling"
+	@info "worker $(rank) : finished sampling, free memory: $(Sys.free_memory()/1024^3), size dict $(Base.summarysize(counts_list)/1024^3), max size by now: $(Sys.maxrss()/1024^3)   $(Dates.format(now(), "HH:MM:SS"))"
 	flush(stdout)
 	return counts_list
 end # EOF
@@ -253,6 +255,7 @@ else # I am worker
 				MPI.wait(dict_req)
 				@info "worker $(rank) sent mex to $(target_merger)"
 				MPI.Isend(0, root, rank + 32, comm) # sends message to root
+@info "worker $(rank): free memory $(Sys.free_memory()/1024^3), size dict $((Base.summarysize(current_dict))/1024^3), max size by now: $(Sys.maxrss()/1024^3)   $(Dates.format(now(), "HH:MM:SS")) "
 			else # if it's -1 
 				global stop = 1
 				current_dict = nothing
