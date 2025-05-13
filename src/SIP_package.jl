@@ -197,9 +197,9 @@ function whole_video_conversion(path2file::String)::BitArray{3}
 	end # end while !eof(reader)
 	median_value = median(gray_array)
 	@. array_bits = gray_array > median_value # broadcasts the value in the preallocated array
-	gray_array=nothing
-        GC.gc()
-        return array_bits
+	gray_array = nothing
+	GC.gc()
+	return array_bits
 end # EOF
 
 
@@ -919,12 +919,12 @@ INPUT:
 a proper approx of the probability dicts, otherwise we'll see no change
 """
 
-function numerical_heat_capacity_T(prob_dict::Dict{BitVector, Float32}, T, approx::Int, ϵ)
+function numerical_heat_capacity_T(prob_dict::Dict{BitVector, Float32}, T, approx::Int, eps)
 	prob_dict_T = prob_at_T(prob_dict, T, approx)
-	prob_dict_Teps = prob_at_T(prob_dict, T + ϵ, approx)
+	prob_dict_Teps = prob_at_T(prob_dict, T + eps, approx)
 	h_T = entropy_T(prob_dict_T)
 	h_Teps = entropy_T(prob_dict_Teps)
-	heat_capacity = T * (((h_Teps) - h_T) ./ ϵ)
+	heat_capacity = T * (((h_Teps) - h_T) ./ eps)
 	return heat_capacity
 end
 
