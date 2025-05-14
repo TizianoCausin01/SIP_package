@@ -886,7 +886,7 @@ function prob_at_T(prob_dict::Dict{BitVector, Float32}, T, approx::Int)::Dict{Bi
 	new_probs = round.(probs_T ./ Z, digits = approx) # derives the values of the new dict at T 
 	new_prob_dict_T = Dict(zip(keys(prob_dict), new_probs)) # creates a new dict with probabilities as values
 	if !isapprox(sum(values(new_prob_dict_T)), 1, atol = 10.0^(-approx + 2)) # just checking that probabilities sum up to one
-		throw(ValueError("the sum of probs is different from 1"))
+		throw(DomainError("the sum of probs is different from 1"))
 	end
 	return new_prob_dict_T
 end

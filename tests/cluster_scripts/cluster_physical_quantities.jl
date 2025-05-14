@@ -19,7 +19,7 @@ end # if !isdir(dir_path)
 for iter in iterations
 	myDict = json2dict("$(counts_dir)/counts_$(file_name)_iter$(iter).json")
 	# Convert the dictionary
-	prob_dict = counts2prob(myDict, 4)
+	prob_dict = counts2prob(myDict, 7)
 	Temp = range(0.5, 4, length = 1000)
 	heat_capacity_array = []
 	entropy_array = []
