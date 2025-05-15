@@ -859,7 +859,7 @@ Input:
 Output:
 - prob_dict::Dict{BitVector, Float32} -> Dictionary with the probabilities of the windows as values
 """
-function counts2prob(counts_dict::Dict{BitVector, Int}, approx::Int)::Dict{BitVector, Float32}
+function counts2prob(counts_dict::Dict{BitVector, Int}, approx::Int)::Dict{BitVector, Float64}
 	vals_counts_dict = values(counts_dict) # extracts the values of the counts_dict
 	tot_counts = sum(vals_counts_dict) # derives the normalizing factor
 	vals_prob_dict = round.(vals_counts_dict ./ tot_counts, digits = approx) # derives the values of the new dict 
@@ -880,7 +880,7 @@ Input:
 Output:
 - new_prob_dict_T::Dict{BitVector, Float32} -> the new dictionary with P_T as values
 """
-function prob_at_T(prob_dict::Dict{BitVector, Float32}, T, approx::Int)::Dict{BitVector, Float32}
+function prob_at_T(prob_dict::Dict{BitVector, Float64}, T, approx::Int)::Dict{BitVector, Float64}
 	probs_T = (values(prob_dict)) .^ (1 / T) # P_T(vec{σ}) =[1/Z(T)]*[P(vec{σ})]^(1/T) here I am computing the second part of this equation
 	Z = sum(probs_T) # calculates the partition function -> Z(T) = Σ_{vec{σ}}{[P(vec{σ})]^(1/T)}
 	new_probs = round.(probs_T ./ Z, digits = approx) # derives the values of the new dict at T 
@@ -900,7 +900,7 @@ Input:
 Output:
 - S_T::Float32 -> the entropy at temperature T. S(T) = - Σ_{P_T(vec{σ})} {P_T(vec{σ}*ln(P_T(vec{σ})))}
 """
-function entropy_T(prob_dict_T::Dict{BitVector, Float32})::Float32
+function entropy_T(prob_dict_T::Dict{BitVector, Float64})::Float64
 	log_p = log.(values(prob_dict_T))
 	nan_mask = isinf.(log_p) # checks where ln(p(σ)) = -inf because p(σ) = 0
 	log_p[nan_mask] .= 0 # substitues -inf with 0s, because lim_{p->0} of p*log(p) = 0
@@ -919,7 +919,7 @@ INPUT:
 a proper approx of the probability dicts, otherwise we'll see no change
 """
 
-function numerical_heat_capacity_T(prob_dict::Dict{BitVector, Float32}, T, approx::Int, eps)
+function numerical_heat_capacity_T(prob_dict::Dict{BitVector, Float64}, T, approx::Int, eps)
 	prob_dict_T = prob_at_T(prob_dict, T, approx)
 	prob_dict_Teps = prob_at_T(prob_dict, T + eps, approx)
 	h_T = entropy_T(prob_dict_T)
