@@ -18,7 +18,7 @@ cg3=3
 win1=3
 win2=3
 win3=3
-mergers_num=10
+mergers_num=15
 module load openmpi
 export JULIA_NUM_THREADS=1
 
