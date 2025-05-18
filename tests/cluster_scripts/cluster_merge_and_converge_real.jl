@@ -214,7 +214,7 @@ elseif in(rank, mergers) # I am merger
 					MPI.Isend(Int32(1), master_merger, rank + 100, comm)
 					dict_buffer = nothing
 					@info "merger $(rank): free memory $(Sys.free_memory()/1024^3), size dict $((Base.summarysize(tot_dicts))/1024^3), max size by now: $(Sys.maxrss()/1024^3)   $(Dates.format(now(), "HH:MM:SS"))"
-					GC.gc()
+                                        GC.gc()
 					@info "merger $(rank): free memory $(Sys.free_memory()/1024^3), size dict $((Base.summarysize(tot_dicts))/1024^3) after GC, max size by now: $(Sys.maxrss()/1024^3)   $(Dates.format(now(), "HH:MM:SS"))"
 
 					flush(stdout)
@@ -270,7 +270,7 @@ else # I am worker
 				@info "worker $(rank): free memory $(Sys.free_memory()/1024^3), size dict $((Base.summarysize(current_dict))/1024^3), max size by now: $(Sys.maxrss()/1024^3)   $(Dates.format(now(), "HH:MM:SS")) "
 				current_dict = nothing
 				GC.gc()
-				@info "worker $(rank): free memory $(Sys.free_memory()/1024^3), size dict $((Base.summarysize(current_dict))/1024^3), max size by now: $(Sys.maxrss()/1024^3)   $(Dates.format(now(), "HH:MM:SS")) after GC"
+				@info "worker $(rank): free memory $(Sys.free_memory()/1024^3), max size by now: $(Sys.maxrss()/1024^3)   $(Dates.format(now(), "HH:MM:SS")) after GC"
 
 				flush(stdout)
 			else # if it's -1 
