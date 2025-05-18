@@ -19,14 +19,15 @@ end # if !isdir(dir_path)
 for iter in iterations
 	myDict = json2dict("$(counts_dir)/counts_$(file_name)_iter$(iter).json")
 	# Convert the dictionary
-	prob_dict = counts2prob(myDict, 7)
+	prob_dict = counts2prob(myDict, 30)
 	Temp = range(0.5, 4, length = 1000)
 	heat_capacity_array = []
 	entropy_array = []
 	for T in Temp
-		curr_prob = prob_at_T(prob_dict, T, 3)
-		push!(entropy_array, entropy_T(curr_prob))
-		push!(heat_capacity_array, numerical_heat_capacity_T(curr_prob, T, 6, 10e-3))
+		curr_prob = prob_at_T(prob_dict, T, 30, 3)
+                h_T, c_T = numerical_heat_capacity_T(prob_dict, curr_prob, T, 30, 3, 10e-3)
+                push!(entropy_array, h_T)
+		push!(heat_capacity_array, c_T)
 	end # for T in Temp
 	writedlm("$(thermo_dir)/phys_entropy_$(file_name)_iter$(iter).csv", entropy_array, ',')
 	writedlm("$(thermo_dir)/heat_capacity_$(file_name)_iter$(iter).csv", heat_capacity_array, ',')
