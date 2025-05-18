@@ -285,10 +285,11 @@ else # I am worker
 				MPI.wait(dict_req)
 				@info "worker $(rank) sent mex to $(target_merger)"
 				MPI.Isend(0, root, rank + 32, comm) # sends message to root
+
 				@info "worker $(rank): free memory $(Sys.free_memory()/1024^3), size dict after compression $((Base.summarysize(current_dict))/1024^3), max size by now: $(Sys.maxrss()/1024^3)   $(Dates.format(now(), "HH:MM:SS")) "
 				current_dict = nothing
 				GC.gc()
-				@info "worker $(rank): free memory $(Sys.free_memory()/1024^3), size dict after compression $((Base.summarysize(current_dict))/1024^3), max size by now: $(Sys.maxrss()/1024^3)   $(Dates.format(now(), "HH:MM:SS")) after GC"
+				@info "worker $(rank): free memory $(Sys.free_memory()/1024^3) , max size by now: $(Sys.maxrss()/1024^3)   $(Dates.format(now(), "HH:MM:SS")) after GC"
 
 				flush(stdout)
 			else # if it's -1 
