@@ -57,8 +57,8 @@ function wrapper_sampling_parallel(video_path, num_of_iterations, glider_coarse_
 	flush(stdout)
 	bin_vid = whole_video_conversion(video_path) # converts a target yt video into a binarized one
 	# preallocation of dictionaries
-        @info "worker $(rank) before sampling: free memory $(Sys.free_memory()/1024^3) max size by now: $(Sys.maxrss()/1024^3)   $(Dates.format(now(), "HH:MM:SS"))"
-counts_list = Vector{Dict{BitVector, UInt64}}(undef, num_of_iterations) # list of count_dicts of every iteration
+	@info "worker $(rank) before sampling: free memory $(Sys.free_memory()/1024^3) max size by now: $(Sys.maxrss()/1024^3)   $(Dates.format(now(), "HH:MM:SS"))"
+	counts_list = Vector{Dict{BitVector, UInt64}}(undef, num_of_iterations) # list of count_dicts of every iteration
 	coarse_g_iterations = Vector{BitArray}(undef, num_of_iterations) # list of all the videos at different levels of coarse graining
 	# further variables for coarse-graining
 	volume = glider_coarse_g_dim[1] * glider_coarse_g_dim[2] * glider_coarse_g_dim[3] #computes the volume of the solid
@@ -86,10 +86,10 @@ counts_list = Vector{Dict{BitVector, UInt64}}(undef, num_of_iterations) # list o
 			) # computation of new iteration array
 			old_vid = new_vid
 			new_vid = nothing
-GC.gc()
+			GC.gc()
 		end # if
 
-	@info "worker $(rank) : iter $(iter_idx), free memory: $(Sys.free_memory()/1024^3), size dict $(Base.summarysize(counts_list)/1024^3), max size by now: $(Sys.maxrss()/1024^3)   $(Dates.format(now(), "HH:MM:SS"))"
+		@info "worker $(rank) : iter $(iter_idx), free memory: $(Sys.free_memory()/1024^3), size dict $(Base.summarysize(counts_list)/1024^3), max size by now: $(Sys.maxrss()/1024^3)   $(Dates.format(now(), "HH:MM:SS"))"
 	end # for
 	@info "worker $(rank) : finished sampling, free memory: $(Sys.free_memory()/1024^3), size dict $(Base.summarysize(counts_list)/1024^3), max size by now: $(Sys.maxrss()/1024^3)   $(Dates.format(now(), "HH:MM:SS"))"
 	flush(stdout)
@@ -212,10 +212,10 @@ elseif in(rank, mergers) # I am merger
 					global task_counter_merger += 1
 					@info "merger $(rank) : $task_counter_merger"
 					MPI.Isend(Int32(1), master_merger, rank + 100, comm)
-dict_buffer = nothing
-                                @info "merger $(rank): free memory $(Sys.free_memory()/1024^3), size dict $((Base.summarysize(tot_dicts))/1024^3), max size by now: $(Sys.maxrss()/1024^3)   $(Dates.format(now(), "HH:MM:SS"))"
-                                GC.gc()
-                                @info "merger $(rank): free memory $(Sys.free_memory()/1024^3), size dict $((Base.summarysize(tot_dicts))/1024^3) after GC, max size by now: $(Sys.maxrss()/1024^3)   $(Dates.format(now(), "HH:MM:SS"))"
+					dict_buffer = nothing
+					@info "merger $(rank): free memory $(Sys.free_memory()/1024^3), size dict $((Base.summarysize(tot_dicts))/1024^3), max size by now: $(Sys.maxrss()/1024^3)   $(Dates.format(now(), "HH:MM:SS"))"
+					GC.gc()
+					@info "merger $(rank): free memory $(Sys.free_memory()/1024^3), size dict $((Base.summarysize(tot_dicts))/1024^3) after GC, max size by now: $(Sys.maxrss()/1024^3)   $(Dates.format(now(), "HH:MM:SS"))"
 
 					flush(stdout)
 				end # if isnothing(tot_data)
@@ -267,11 +267,12 @@ else # I am worker
 				MPI.wait(dict_req)
 				@info "worker $(rank) sent mex to $(target_merger)"
 				MPI.Isend(0, root, rank + 32, comm) # sends message to root
-                                @info "worker $(rank): free memory $(Sys.free_memory()/1024^3), size dict $((Base.summarysize(current_dict))/1024^3), max size by now: $(Sys.maxrss()/1024^3)   $(Dates.format(now(), "HH:MM:SS")) "
-                                GC.gc()
-                                @info "worker $(rank): free memory $(Sys.free_memory()/1024^3), size dict $((Base.summarysize(current_dict))/1024^3), max size by now: $(Sys.maxrss()/1024^3)   $(Dates.format(now(), "HH:MM:SS")) after GC"
+				@info "worker $(rank): free memory $(Sys.free_memory()/1024^3), size dict $((Base.summarysize(current_dict))/1024^3), max size by now: $(Sys.maxrss()/1024^3)   $(Dates.format(now(), "HH:MM:SS")) "
+				current_dict = nothing
+				GC.gc()
+				@info "worker $(rank): free memory $(Sys.free_memory()/1024^3), size dict $((Base.summarysize(current_dict))/1024^3), max size by now: $(Sys.maxrss()/1024^3)   $(Dates.format(now(), "HH:MM:SS")) after GC"
 
-					flush(stdout)
+				flush(stdout)
 			else # if it's -1 
 				global stop = 1
 				current_dict = nothing
