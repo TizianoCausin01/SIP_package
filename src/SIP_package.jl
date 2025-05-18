@@ -412,7 +412,9 @@ function glider(bin_vid, glider_dim)
 			for i_rows ∈ 1:vid_dim[1]-glider_dim[1]
 				idx_rows = i_rows:i_rows+glider_dim[1]-1
 				window = view(bin_vid, idx_rows, idx_cols, idx_time) # index in video, gets the current window and immediately vectorizes it. 
-				counts = update_count(counts, vec(window))
+				#counts = update_count(counts, vec(window))
+				vec_window = vec(window)
+				counts[vec_window] = get!(counts, vec_window, 0) + 1
 			end # cols
 		end # rows
 	end # time
@@ -919,7 +921,7 @@ INPUT:
 a proper approx of the probability dicts, otherwise we'll see no change
 """
 
-function numerical_heat_capacity_T(prob_dict, prob_dict_T::Dict{BitVector, Float64}, T, approx_P::Int,approx_check, eps)
+function numerical_heat_capacity_T(prob_dict, prob_dict_T::Dict{BitVector, Float64}, T, approx_P::Int, approx_check, eps)
 	prob_dict_Teps = prob_at_T(prob_dict, T + eps, approx_P, approx_check)
 	h_T = entropy_T(prob_dict_T)
 	h_Teps = entropy_T(prob_dict_Teps)
