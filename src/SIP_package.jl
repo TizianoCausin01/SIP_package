@@ -418,6 +418,8 @@ function glider(bin_vid, glider_dim)
 			end # cols
 		end # rows
 	end # time
+	bin_vid = nothing
+	GC.gc()
 	return counts
 end # EOF
 
