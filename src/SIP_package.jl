@@ -880,13 +880,13 @@ Input:
 Output:
 - new_prob_dict_T::Dict{BitVector, Float32} -> the new dictionary with P_T as values
 """
-function prob_at_T(prob_dict::Dict{BitVector, Float64}, T, approx::Int)::Dict{BitVector, Float64}
+function prob_at_T(prob_dict::Dict{BitVector, Float64}, T, approx_P::Int, approx_check::Int)::Dict{BitVector, Float64}
 	probs_T = (values(prob_dict)) .^ (1 / T) # P_T(vec{σ}) =[1/Z(T)]*[P(vec{σ})]^(1/T) here I am computing the second part of this equation
 	Z = sum(probs_T) # calculates the partition function -> Z(T) = Σ_{vec{σ}}{[P(vec{σ})]^(1/T)}
-	new_probs = round.(probs_T ./ Z, digits = approx) # derives the values of the new dict at T 
+	new_probs = round.(probs_T ./ Z, digits = approx_P) # derives the values of the new dict at T 
 	new_prob_dict_T = Dict(zip(keys(prob_dict), new_probs)) # creates a new dict with probabilities as values
-	if !isapprox(sum(values(new_prob_dict_T)), 1, atol = 10.0^(-approx + 2)) # just checking that probabilities sum up to one
-		throw(DomainError("the sum of probs is different from 1"))
+	if !isapprox(sum(values(new_prob_dict_T)), 1, atol = 10.0^(-approx_check)) # just checking that probabilities sum up to one
+		throw(DomainError("the sum of probs is different from 1 at T = $(T) -> sum: $(sum(values(new_prob_dict_T)))"))
 	end
 	return new_prob_dict_T
 end
@@ -919,13 +919,12 @@ INPUT:
 a proper approx of the probability dicts, otherwise we'll see no change
 """
 
-function numerical_heat_capacity_T(prob_dict::Dict{BitVector, Float64}, T, approx::Int, eps)
-	prob_dict_T = prob_at_T(prob_dict, T, approx)
-	prob_dict_Teps = prob_at_T(prob_dict, T + eps, approx)
+function numerical_heat_capacity_T(prob_dict, prob_dict_T::Dict{BitVector, Float64}, T, approx_P::Int,approx_check, eps)
+	prob_dict_Teps = prob_at_T(prob_dict, T + eps, approx_P, approx_check)
 	h_T = entropy_T(prob_dict_T)
 	h_Teps = entropy_T(prob_dict_Teps)
 	heat_capacity = T * (((h_Teps) - h_T) ./ eps)
-	return heat_capacity
+	return h_T, heat_capacity
 end
 
 
