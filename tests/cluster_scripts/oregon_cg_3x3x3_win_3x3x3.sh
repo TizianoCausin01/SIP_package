@@ -9,6 +9,7 @@
 #SBATCH --partition=boost_usr_prod # partition name
 #SBATCH --job-name=oregon_cg_3x3x3_win_3x3x3
 #SBATCH --output=/leonardo_scratch/fast/Sis25_piasini/tcausin/log_exchange/%x.%j.out   # file name will be *job_name*.*job_id*
+#SBATCH --error=/leonardo_scratch/fast/Sis25_piasini/tcausin/log_exchange/%x.%j.err   # file name will be *job_name*.*job_id*
 
 cd /leonardo/home/userexternal/epiasini/sissa/tiziano/SIP_package
 fn=oregon
