@@ -1,8 +1,8 @@
 # master, workers, mergers, master_merger
 # master: allocates jobs
-using Pkg
-cd("/leonardo/home/userexternal/tcausin0/virtual_envs/SIP_dev")
-Pkg.activate(".")
+#using Pkg
+#cd("/leonardo/home/userexternal/tcausin0/virtual_envs/SIP_dev")
+#Pkg.activate(".")
 
 using SIP_package
 using MPI
