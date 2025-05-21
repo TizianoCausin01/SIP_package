@@ -1,6 +1,6 @@
 using Pkg
-#cd("/leonardo/home/userexternal/tcausin0/virtual_envs/SIP_dev")
-cd("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_package/SIP_dev")
+cd("/leonardo/home/userexternal/tcausin0/virtual_envs/SIP_dev")
+#cd("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_package/SIP_dev")
 Pkg.activate(".")
 flush(stdout)
 flush(stderr)
@@ -16,8 +16,8 @@ nproc = MPI.Comm_size(comm) # to establish the total number of processes used
 worker = 0
 merger = 1
 name_vid = ARGS[1]
-#split_folder = "/leonardo_scratch/fast/Sis25_piasini/tcausin/SIP_data/$(name_vid)_split"
-split_folder = "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/data_repo/SIP_data/$(name_vid)_split"
+split_folder = "/leonardo_scratch/fast/Sis25_piasini/tcausin/SIP_data/$(name_vid)_split"
+#split_folder = "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/data_repo/SIP_data/$(name_vid)_split"
 split_files = "$(split_folder)/$(name_vid)%03d.mp4"
 files_names = readdir(split_folder)
 # vars for sampling
@@ -54,6 +54,7 @@ if rank == 0
 	end # for file in files_names
 elseif rank == 1 # I am merger
 	while true
+sleep(100)
 		ismessage_len, status = MPI.Iprobe(worker, rank + 64, comm)
 		ismessage, status = MPI.Iprobe(worker, rank + 32, comm)
 		if ismessage & ismessage_len
