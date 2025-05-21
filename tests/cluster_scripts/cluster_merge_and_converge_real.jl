@@ -12,11 +12,11 @@ using CodecZlib
 const Int = Int32
 ##
 # vars for parallel
-MPI.Init()
-comm = MPI.COMM_WORLD
-rank = MPI.Comm_rank(comm) # to establish a unique ID for each process
-nproc = MPI.Comm_size(comm) # to establish the total number of processes used
-root = 0
+#MPI.Init()
+#comm = MPI.COMM_WORLD
+#rank = MPI.Comm_rank(comm) # to establish a unique ID for each process
+#nproc = MPI.Comm_size(comm) # to establish the total number of processes used
+#root = 0
 
 
 # vars for parallel
@@ -51,6 +51,44 @@ end #if rank==root
 
 ##
 
+
+function generate_rand_dict(size_str, size_dict)
+
+	if 2^size_str < size_dict
+		@warn "the possible combinations of bits are less than the desired size of the dictionary"
+	end
+		my_dict = Dict{BitVector, UInt64}()
+		for i in 1:size_dict
+			key = BitVector(rand(Bool, size_str))
+			val = UInt64(rand(1:10000000))
+			my_dict[key] = val
+		end # for i in 1:size_dict
+	return my_dict
+end # EOF
+
+function fake_glider(bin_vid, glider_dim)
+	# counts = Dict{BitVector, Int}()
+	# vid_dim = size(bin_vid)
+	# for i_time ∈ 1:vid_dim[3]-glider_dim[3] # step of sampling glider = 1 
+	# 	idx_time = i_time:i_time+glider_dim[3]-1 # you have to subtract one, otherwise you will end up getting a bigger glider
+	# 	for i_cols ∈ 1:vid_dim[2]-glider_dim[2]
+	# 		idx_cols = i_cols:i_cols+glider_dim[2]-1
+	# 		for i_rows ∈ 1:vid_dim[1]-glider_dim[1]
+	# 			idx_rows = i_rows:i_rows+glider_dim[1]-1
+	# 			window = view(bin_vid, idx_rows, idx_cols, idx_time) # index in video, gets the current window and immediately vectorizes it. 
+	# 			#counts = update_count(counts, vec(window))
+	# 			vec_window = vec(window)
+	# 			counts[vec_window] = get!(counts, vec_window, 0) + 1
+	# 		end # cols
+	# 	end # rows
+	# end # time
+	# bin_vid = nothing
+	# GC.gc()
+        counts = generate_rand_dict(27,5000000)
+	return counts
+end # EOF
+
+
 function wrapper_sampling_parallel(video_path, num_of_iterations, glider_coarse_g_dim, glider_dim)
 	# video conversion into BitArray
 	@info "worker $(rank): running binarization,  free memory $(Sys.free_memory()/1024^3) max size by now: $(Sys.maxrss()/1024^3)    $(Dates.format(now(), "HH:MM:SS"))"
@@ -68,26 +106,27 @@ function wrapper_sampling_parallel(video_path, num_of_iterations, glider_coarse_
 	bin_vid = nothing
 	for iter_idx ∈ 1:num_of_iterations
 		# samples the current iteration
-		counts_list[iter_idx] = glider(old_vid, glider_dim) # samples the current iteration
+	        #counts_list[iter_idx] = glider(old_vid, glider_dim) # samples the current iteration
+                counts_list[iter_idx] = fake_glider(old_vid, glider_dim)
 		# coarse-graining of the current iteration
-		if iter_idx < num_of_iterations
-			old_dim = size(old_vid) # gets the dimensions of the current iteration
-			new_dim = get_new_dimensions(old_dim, glider_coarse_g_dim) # computes the dimensions of the next iteration
-			# creates a 3D tuple of vectors with the steps the coarse-graining glider will have to do
-			steps_coarse_g = compute_steps_glider(glider_coarse_g_dim, old_dim) # precomputes the steps of the coarse-graining glider
-			new_vid = BitArray(undef, new_dim) # preallocation of new iteration array
-			fill!(new_vid, false)
-			new_vid = glider_coarse_g(
-				old_vid,
-				new_vid,
-				steps_coarse_g,
-				glider_coarse_g_dim,
-				cutoff,
-			) # computation of new iteration array
-			old_vid = new_vid
-			new_vid = nothing
-			GC.gc()
-		end # if
+		# if iter_idx < num_of_iterations
+		# 	old_dim = size(old_vid) # gets the dimensions of the current iteration
+		# 	new_dim = get_new_dimensions(old_dim, glider_coarse_g_dim) # computes the dimensions of the next iteration
+		# 	# creates a 3D tuple of vectors with the steps the coarse-graining glider will have to do
+		# 	steps_coarse_g = compute_steps_glider(glider_coarse_g_dim, old_dim) # precomputes the steps of the coarse-graining glider
+		# 	new_vid = BitArray(undef, new_dim) # preallocation of new iteration array
+		# 	fill!(new_vid, false)
+		# 	new_vid = glider_coarse_g(
+		# 		old_vid,
+		# 		new_vid,
+		# 		steps_coarse_g,
+		# 		glider_coarse_g_dim,
+		# 		cutoff,
+		# 	) # computation of new iteration array
+		# 	old_vid = new_vid
+		# 	new_vid = nothing
+		# 	GC.gc()
+		# end # if
 
 		@info "worker $(rank) : iter $(iter_idx), free memory: $(Sys.free_memory()/1024^3), size dict $(Base.summarysize(counts_list)/1024^3), max size by now: $(Sys.maxrss()/1024^3)   $(Dates.format(now(), "HH:MM:SS"))"
 	end # for
@@ -110,7 +149,8 @@ if rank == root # I am root
 			break
 		end # task_counter_root > n_tasks
 	end # for dst in 1:(nproc-2)
-	while task_counter_root <= n_tasks # until we exhaust all tasks
+        while task_counter_root <= n_tasks # until we exhaust all tasks
+                
 		for dst in workers # loops over all the workers (mergers excluded)
 			ismessage, status = MPI.Iprobe(dst, dst + 32, comm) # root checks if it has received any message from the dst (in this case dst is the source of the feedback message, but originally it was the dst of the task allocation)
 			if ismessage # if there is any message to receive
@@ -247,16 +287,18 @@ else # I am worker
 				current_dict = MPI.serialize(current_dict)
 				current_dict = transcode(ZlibCompressor, current_dict)
 				length_dict = Int32(length(current_dict))
-				no_merger = true
+			        no_merger = true
+                            
 				while no_merger == true # loops until it gets a free merger (this is because the mergers may be busy)
-					ask_req = MPI.Isend(Int32(0), master_merger, rank + 100, comm) # sends request to master_merger # FIXME it sends the request but the master_merger doesn't receive it
-					MPI.wait(ask_req) # waits until the reception of the request
+					ask_req = MPI.Send(Int32(0), master_merger, rank + 100, comm) # sends request to master_merger # FIXME it sends the request but the master_merger doesn't receive it
+					#MPI.wait(ask_req) # waits until the reception of the request
 					#@info "worker $(rank): request sent"
-					MPI.Probe(master_merger, rank + 101, comm) # blocking operation because otherwise it keeps looping 
+					#MPI.Probe(master_merger, rank + 101, comm) # blocking operation because otherwise it keeps looping 
 					#@info "worker request received"
-					global target_merger = Vector{Int32}(undef, 1) # preallocates recv buffer
-					MPI.Irecv!(target_merger, master_merger, rank + 101, comm)
-					global target_merger = target_merger[1]
+					#global target_merger = Vector{Int32}(undef, 1) # preallocates recv buffer
+                                        global target_merger = MPI.Recv(Int32, master_merger, rank+101, comm)
+                                        #MPI.Irecv!(target_merger, master_merger, rank + 101, comm)
+					#global target_merger = target_merger[1]
 					if target_merger != -1
 						no_merger = false
 					end # if target_merger != -1
