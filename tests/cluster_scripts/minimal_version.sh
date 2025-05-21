@@ -2,7 +2,8 @@
 
 #SBATCH --nodes=1
 #SBATCH --time=24:00:00
-#SBATCH --ntasks=1 # number of processes
+#SBATCH --ntasks=2 # number of processes
+#SBATCH --cpus-per-task=1
 #SBATCH --mem=480G
 #SBATCH --account=Sis25_piasini       # account name
 #SBATCH --partition=boost_usr_prod # partition name
@@ -14,4 +15,4 @@ fn=oregon
 module load openmpi
 export JULIA_NUM_THREADS=1
 julia --version
-stdbuf -o0 -e0 julia /leonardo/home/userexternal/tcausin0/SIP_package/tests/cluster_scripts/minimal_version.jl $fn 
+mpiexec -np 2 stdbuf -o0 -e0 julia /leonardo/home/userexternal/tcausin0/SIP_package/tests/cluster_scripts/minimal_version.jl $fn 
