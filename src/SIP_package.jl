@@ -49,7 +49,8 @@ using Images,
 	JSON,
 	LinearAlgebra,
 	MPI,
-	CodecZlib
+	CodecZlib,
+        Dates
 
 # =========================
 # WRAPPER ALL
@@ -85,7 +86,7 @@ function wrapper_sampling(video_path::String, results_path::String, file_name::S
 
 	coarse_g_iterations[1] = bin_vid # stores iteration 0
 	for iter_idx ∈ 1:num_of_iterations
-		@info "running iteration $iter_idx"
+		@info "$(Dates.format(now(), "HH:MM:SS")) running iteration $iter_idx"
 		@time begin
 			# samples the current iteration
 			counts_list[iter_idx] = glider(coarse_g_iterations[iter_idx], glider_dim) # samples the current iteration
@@ -1096,7 +1097,7 @@ function meg_sampling(bin_signal::BitVector, num_of_iterations::Int, glider_coar
 	cutoff = glider_coarse_g_dim / 2 # sets the cutoff for the majority rule 
 	coarse_g_iterations[1] = bin_signal # stores iteration 0
 	for iter_idx ∈ 1:num_of_iterations
-		@info "running iteration $iter_idx"
+		@info "$(Dates.format(now(), "HH:MM:SS")) running iteration $iter_idx"
 		# samples the current iteration
 		counts_list[iter_idx] = meg_glider(coarse_g_iterations[iter_idx], glider_dim) # samples the current iteration
 		if iter_idx < num_of_iterations
@@ -1272,13 +1273,13 @@ function centering_whitening(X, tol)
 
 	# Compute the covariance matrix
 	C = cov(X_centered)
-	@info "$(size(C))"
+	@info "$(Dates.format(now(), "HH:MM:SS")) $(size(C))"
 
 	# Eigen-decomposition of the covariance matrix
 	F = eigen(C)
 	evals = F.values
 	neg_idx = evals .< tol
-	@info "$neg_idx"
+	@info "$(Dates.format(now(), "HH:MM:SS")) $neg_idx"
 	evals[neg_idx] .= tol
 
 	# Only retain positive eigenvalues (to avoid numerical issues with small negative eigenvalues)
@@ -1314,9 +1315,9 @@ none
 """
 function mergers_convergence(rank, mergers_arr, my_dict, num_of_iterations, results_folder, name_vid, comm)
 	levels = get_steps_convergence(mergers_arr)
-	@info "proc $(rank) before converging: free memory $(Sys.free_memory()/1024^3)"
+	@info "$(Dates.format(now(), "HH:MM:SS")) proc $(rank) before converging: free memory $(Sys.free_memory()/1024^3)"
 	if rank == mergers_arr[1]
-		@info "levels: $(levels)"
+		@info "$(Dates.format(now(), "HH:MM:SS")) levels: $(levels)"
 	end # if rank==0
 	for lev in 1:(length(levels)-1) # stops before the last el in levels
 		if in(rank, levels[lev]) # if the process is within the current levels iteration (otherwise it has already sent its dict)
@@ -1329,8 +1330,8 @@ function mergers_convergence(rank, mergers_arr, my_dict, num_of_iterations, resu
 					new_dict = MPI.deserialize(new_dict)
 					merge_vec_dicts(my_dict, new_dict, num_of_iterations)
 					new_dict = nothing
-					GC.gc()
-					@info "rank $(rank): merged with dict from rank $(levels[lev][idx_src])"
+					#GC.gc()
+					@info "$(Dates.format(now(), "HH:MM:SS")) rank $(rank): merged with dict from rank $(levels[lev][idx_src])"
 				end # if proc + 1 <= length(mergers) 
 			else
 				idx_dst = findfirst(rank .== levels[lev]) - 1 # finds the idx of the receiver (one idx below its)
@@ -1339,8 +1340,8 @@ function mergers_convergence(rank, mergers_arr, my_dict, num_of_iterations, resu
 				# MPI.send(my_dict, levels[lev][idx_dst], lev, comm) # sends its dict
 				send_large_data(my_dict, levels[lev][idx_dst], lev, comm)
 				my_dict = nothing
-				GC.gc()
-				@info "proc $(rank) after converging: free memory $(Sys.free_memory()/1024^3)"
+				#GC.gc()
+				@info "$(Dates.format(now(), "HH:MM:SS")) proc $(rank) after converging: free memory $(Sys.free_memory()/1024^3)"
 			end # if in(rank, lev)
 		end # if in(rank, levels[lev])
 	end # for lev in levels
@@ -1411,19 +1412,19 @@ function send_large_data(data, dst, tag, comm)
 	onsets = collect(0:2000000000:size_data)
 	status = MPI.send(UInt32(length(onsets)), dst, tag, comm)
 	append!(onsets, size_data)
-	@info "onsets $(onsets)"
+	@info "$(Dates.format(now(), "HH:MM:SS")) onsets $(onsets)"
 	count = 0
 	for ichunk in 1:length(onsets)-1
 		chunk = data[onsets[ichunk]+1:onsets[ichunk+1]]
 		count += 1
 		status = MPI.send(chunk, dst, tag + count, comm)
-		@info "sent chunk from $(onsets[ichunk]) to $(onsets[ichunk+1])"
+		@info "$(Dates.format(now(), "HH:MM:SS")) sent chunk from $(onsets[ichunk]) to $(onsets[ichunk+1])"
 	end # for ichunk in 1:length(onsets)-1
-	@info "things sent: $(count)"
+	@info "$(Dates.format(now(), "HH:MM:SS")) things sent: $(count)"
 end #EOF
 function rec_large_data(src, tag, comm)
 	len_onsets, status = MPI.recv(src, tag, comm)
-	@info "len_onsets $(len_onsets)"
+	@info "$(Dates.format(now(), "HH:MM:SS")) len_onsets $(len_onsets)"
 	if len_onsets == 1
 		tot_steps = 1
 	else
@@ -1435,10 +1436,10 @@ function rec_large_data(src, tag, comm)
 		count += 1
 		chunk, status = MPI.recv(src, tag + count, comm)
 		append!(data_rec, chunk)
-		@info "received chunk of size $(length(chunk))"
-		@info "size current data_rec: $(length(data_rec))"
+		@info "$(Dates.format(now(), "HH:MM:SS")) received chunk of size $(length(chunk))"
+		@info "$(Dates.format(now(), "HH:MM:SS")) size current data_rec: $(length(data_rec))"
 	end # for ichunk in 1:length_onsets-1
-	@info "things received: $(count)"
+	@info "$(Dates.format(now(), "HH:MM:SS")) things received: $(count)"
 	return data_rec
 end #EOF
 
