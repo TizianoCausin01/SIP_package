@@ -24,8 +24,10 @@ if !isdir(thermo_dir) # checks if the directory already exists
 end # if !isdir(dir_path)
 iter = rank + 1
 myDict = json2dict("$(counts_dir)/counts_$(file_name)_iter$(iter).json")
+@info "proc $(rank) : dict loaded"
 # Convert the dictionary
 prob_dict = counts2prob(myDict, 30)
+@info "proc $(rank) : dict converted"
 Temp = range(0.5, 4, length = 1000)
 heat_capacity_array = []
 entropy_array = []
@@ -38,6 +40,7 @@ end # for T in Temp
 writedlm("$(thermo_dir)/phys_entropy_$(file_name)_iter$(iter).csv", entropy_array, ',')
 writedlm("$(thermo_dir)/heat_capacity_$(file_name)_iter$(iter).csv", heat_capacity_array, ',')
 
+@info "proc $(rank) : finished"
 ## to visualize it
 # hc = readdlm("$(thermo_dir)/heat_capacity_$(file_name)_iter1.csv", ',')
 # plot(range(0.5, 4, length = 1000), hc)

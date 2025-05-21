@@ -56,10 +56,10 @@ function generate_rand_dict(size_str, size_dict)
 	if 2^size_str < size_dict
 		@warn "the possible combinations of bits are less than the desired size of the dictionary"
 	end
-		my_dict = Dict{BitVector, Int}()
+		my_dict = Dict{BitVector, UInt64}()
 		for i in 1:size_dict
 			key = BitVector(rand(Bool, size_str))
-			val = rand(1:100)
+			val = UInt64(rand(1:10000000))
 			my_dict[key] = val
 		end # for i in 1:size_dict
 	return my_dict

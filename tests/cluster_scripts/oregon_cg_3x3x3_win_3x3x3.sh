@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --nodes=1
-#SBATCH --time=24:00:00
+#SBATCH --time=00:02:00
 #SBATCH --ntasks=32 # number of processes
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=480G
@@ -21,5 +21,5 @@ win3=3
 mergers_num=7
 module load openmpi
 export JULIA_NUM_THREADS=1
-
+julia --version
 time mpiexec --bind-to core --map-by core -np $SLURM_NTASKS stdbuf -o0 -e0 julia /leonardo/home/userexternal/tcausin0/SIP_package/tests/cluster_scripts/cluster_merge_and_converge_real.jl $fn $cg1 $cg2 $cg3 $win1 $win2 $win3 $mergers_num
