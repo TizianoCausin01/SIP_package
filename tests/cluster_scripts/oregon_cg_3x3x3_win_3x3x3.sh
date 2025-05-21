@@ -2,9 +2,9 @@
 
 #SBATCH --nodes=1
 #SBATCH --time=02:00:00
-#SBATCH --ntasks=12 # number of processes
+#SBATCH --ntasks=32 # number of processes
 #SBATCH --cpus-per-task=1
-#SBATCH --mem=220G
+#SBATCH --mem=480G
 #SBATCH --account=Sis25_piasini       # account name
 #SBATCH --partition=boost_usr_prod # partition name
 #SBATCH --job-name=oregon_cg_3x3x3_win_3x3x3
@@ -19,7 +19,7 @@ cg3=3
 win1=3
 win2=3
 win3=3
-mergers_num=3
+mergers_num=7
 module load openmpi hdf5
 export JULIA_NUM_THREADS=1
 

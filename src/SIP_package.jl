@@ -1319,14 +1319,19 @@ function mergers_convergence(rank, mergers_arr, my_dict, num_of_iterations, resu
 	if rank == mergers_arr[1]
 		@info "$(Dates.format(now(), "HH:MM:SS")) levels: $(levels)"
 	end # if rank==0
+        new_dict_buffer = Vector{UInt8}(undef, 1)
 	for lev in 1:(length(levels)-1) # stops before the last el in levels
 		if in(rank, levels[lev]) # if the process is within the current levels iteration (otherwise it has already sent its dict)
 			if in(rank, levels[lev+1]) # in case it is a receiver (odd-indexed, it will be present also in the nxt step)
 				if rank + 1 <= levels[lev][end] # for the margins, it lets pass only the processes that have someone above, otherwise there is no merging at that step for the margin
 					idx_src = findfirst(rank .== levels[lev]) + 1 # computes the index of the source process (one idx up the idx of the process)
 					# new_dict, status = MPI.recv(levels[lev][idx_src], lev, comm) # receives the new dict
-					new_dict = rec_large_data(levels[lev][idx_src], lev, comm)
-					new_dict = transcode(ZlibDecompressor, new_dict)
+					#new_dict = rec_large_data(levels[lev][idx_src], lev, comm)
+                                        new_dict_length = MPI.Recv(Int64, comm; source=levels[lev][idx_src], tag=lev)
+				        # we recycle the memory allotted to dict_buffer from one iteration to the next
+				        resize!(new_dict_buffer, new_dict_length)
+                                        MPI.Recv!(new_dict_buffer, comm; source=levels[lev][idx_src], tag=lev)
+					new_dict = transcode(ZlibDecompressor, new_dict_buffer)
 					new_dict = MPI.deserialize(new_dict)
 					merge_vec_dicts(my_dict, new_dict, num_of_iterations)
 					new_dict = nothing
@@ -1338,7 +1343,9 @@ function mergers_convergence(rank, mergers_arr, my_dict, num_of_iterations, resu
 				my_dict = MPI.serialize(my_dict)
 				my_dict = transcode(ZlibCompressor, my_dict)
 				# MPI.send(my_dict, levels[lev][idx_dst], lev, comm) # sends its dict
-				send_large_data(my_dict, levels[lev][idx_dst], lev, comm)
+				#send_large_data(my_dict, levels[lev][idx_dst], lev, comm)
+                                MPI.Send(UInt64(length(my_dict)), comm; dest=levels[lev][idx_dst], tag=lev)
+                                MPI.Send(my_dict, comm; dest=levels[lev][idx_dst], tag=lev)
 				my_dict = nothing
 				#GC.gc()
 				@info "$(Dates.format(now(), "HH:MM:SS")) proc $(rank) after converging: free memory $(Sys.free_memory()/1024^3)"
