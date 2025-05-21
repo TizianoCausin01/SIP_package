@@ -1,6 +1,6 @@
 # master, workers, mergers, master_merger
 # master: allocates jobs
-@info "$(run(`julia --version`)"
+@info "$(run(`julia --version`))"
 using Pkg
 cd("/leonardo/home/userexternal/tcausin0/virtual_envs/SIP_dev")
 # cd("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_package/SIP_dev")
@@ -15,7 +15,6 @@ split_folder = "/leonardo_scratch/fast/Sis25_piasini/tcausin/SIP_data/$(name_vid
 # split_folder = "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/data_repo/SIP_data/$(name_vid)_split"
 split_files = "$(split_folder)/$(name_vid)%03d.mp4"
 files_names = readdir(split_folder)
-tasks = 1:n_tasks
 # vars for sampling
 glider_dim = (2, 2, 1) # rows, cols, depth
 ##
