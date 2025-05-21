@@ -1,15 +1,15 @@
 #!/bin/bash
 
 #SBATCH --nodes=1
-#SBATCH --time=02:00:00
+#SBATCH --time=24:00:00
 #SBATCH --ntasks=32 # number of processes
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=480G
 #SBATCH --account=Sis25_piasini       # account name
 #SBATCH --partition=boost_usr_prod # partition name
 #SBATCH --job-name=oregon_cg_3x3x3_win_3x3x3
-#SBATCH --output=/leonardo/home/userexternal/epiasini/sissa/tiziano/logs/%x.%j.out   # file name will be *job_name*.*job_id*
-#SBATCH --error=/leonardo/home/userexternal/epiasini/sissa/tiziano/logs/%x.%j.err   # file name will be *job_name*.*job_id*
+#SBATCH --output=/leonardo_scratch/fast/Sis25_piasini/tcausin/log_exchange/%x.%j.out   # file name will be *job_name*.*job_id*
+#SBATCH --error=/leonardo_scratch/fast/Sis25_piasini/tcausin/log_exchange/%x.%j.err   # file name will be *job_name*.*job_id*
 
 cd /leonardo/home/userexternal/epiasini/sissa/tiziano/SIP_package
 fn=oregon
