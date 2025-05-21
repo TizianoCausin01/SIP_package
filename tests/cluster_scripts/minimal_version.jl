@@ -1,5 +1,6 @@
 # master, workers, mergers, master_merger
 # master: allocates jobs
+@info "$(run(`julia --version`)"
 using Pkg
 cd("/leonardo/home/userexternal/tcausin0/virtual_envs/SIP_dev")
 # cd("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_package/SIP_dev")
