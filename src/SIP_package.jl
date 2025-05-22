@@ -418,7 +418,7 @@ function glider(bin_vid, glider_dim)
 				window = view(bin_vid, idx_rows, idx_cols, idx_time) # index in video, gets the current window and immediately vectorizes it. 
 				#counts = update_count(counts, vec(window))
 				vec_window = vec(window)
-				counts[vec(window)] = get!(counts, vec_window, 0) + 1
+				counts[vec_window] = get!(counts, vec_window, 0) + 1
 			end # cols
 		end # rows
 	end # time
