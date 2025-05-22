@@ -97,7 +97,7 @@ function wrapper_sampling_parallel(video_path, num_of_iterations, glider_coarse_
 			) # computation of new iteration array
 			old_vid = new_vid
 			new_vid = nothing
-			#GC.gc()
+			GC.gc()
 		end # if
 
 		@info "$(Dates.format(now(), "HH:MM:SS")) worker $(rank) : iter $(iter_idx), free memory: $(Sys.free_memory()/1024^3), size dict $(Base.summarysize(counts_list)/1024^3), max size by now: $(Sys.maxrss()/1024^3)"
@@ -191,8 +191,8 @@ elseif in(rank, mergers) # I am merger
 				
 			MPI.Recv!(dict_buffer, comm; source=src_worker, tag=32)
 			@info "$(Dates.format(now(), "HH:MM:SS")) merger $(rank): received dict from $(src_worker)"
-			dict_decomp = transcode(ZlibDecompressor, dict_buffer)
-			dict_decomp = MPI.deserialize(dict_decomp)
+			#dict_decomp = transcode(ZlibDecompressor, dict_buffer)
+			dict_decomp = MPI.deserialize(dict_buffer)
 			if tot_dicts === nothing
 				global tot_dicts = dict_decomp
 				@info "$(Dates.format(now(), "HH:MM:SS")) merger $(rank): processed $(task_counter_merger) chunks out of $(n_tasks)"
@@ -234,7 +234,7 @@ else # I am worker
 		if current_data != -1 # if the message isn't the termination message
 			current_dict = wrapper_sampling_parallel(joinpath(split_folder, files_names[current_data]), num_of_iterations, glider_coarse_g_dim, glider_dim)
 			current_dict = MPI.serialize(current_dict)
-			current_dict = transcode(ZlibCompressor, current_dict)
+			#current_dict = transcode(ZlibCompressor, current_dict)
 			length_dict = Int32(length(current_dict))
 			MPI.Send(Int32(current_data), comm; dest=master_merger, tag=100) # sends request to master_merger
                         target_merger = MPI.Recv(Int32, comm; source=master_merger, tag=100)
