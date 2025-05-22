@@ -406,16 +406,19 @@ Outputs :
 function glider(bin_vid, glider_dim)
 	counts = Dict{BitVector, Int}()
 	vid_dim = size(bin_vid)
+	idx_time = 1:1+glider_dim[3]-1
+	idx_cols = 1:1+glider_dim[2]-1
+	idx_rows = 1:1+glider_dim[1]-1
 	for i_time ∈ 1:vid_dim[3]-glider_dim[3] # step of sampling glider = 1 
-		idx_time = i_time:i_time+glider_dim[3]-1 # you have to subtract one, otherwise you will end up getting a bigger glider
+		idx_time[:] = i_time:i_time+glider_dim[3]-1 # you have to subtract one, otherwise you will end up getting a bigger glider
 		for i_cols ∈ 1:vid_dim[2]-glider_dim[2]
-			idx_cols = i_cols:i_cols+glider_dim[2]-1
+			idx_cols[:] = i_cols:i_cols+glider_dim[2]-1
 			for i_rows ∈ 1:vid_dim[1]-glider_dim[1]
-				idx_rows = i_rows:i_rows+glider_dim[1]-1
+				idx_rows[:] = i_rows:i_rows+glider_dim[1]-1
 				window = view(bin_vid, idx_rows, idx_cols, idx_time) # index in video, gets the current window and immediately vectorizes it. 
 				#counts = update_count(counts, vec(window))
 				vec_window = vec(window)
-				counts[vec_window] = get!(counts, vec_window, 0) + 1
+				counts[vec(window)] = get!(counts, vec_window, 0) + 1
 			end # cols
 		end # rows
 	end # time
@@ -1331,8 +1334,8 @@ function mergers_convergence(rank, mergers_arr, my_dict, num_of_iterations, resu
 				        # we recycle the memory allotted to dict_buffer from one iteration to the next
 				        resize!(new_dict_buffer, new_dict_length)
                                         MPI.Recv!(new_dict_buffer, comm; source=levels[lev][idx_src], tag=lev)
-					new_dict = transcode(ZlibDecompressor, new_dict_buffer)
-					new_dict = MPI.deserialize(new_dict)
+					#new_dict = transcode(ZlibDecompressor, new_dict_buffer)
+					new_dict = MPI.deserialize(new_dict_buffer)
 					merge_vec_dicts(my_dict, new_dict, num_of_iterations)
 					new_dict = nothing
 					#GC.gc()
@@ -1341,7 +1344,7 @@ function mergers_convergence(rank, mergers_arr, my_dict, num_of_iterations, resu
 			else
 				idx_dst = findfirst(rank .== levels[lev]) - 1 # finds the idx of the receiver (one idx below its)
 				my_dict = MPI.serialize(my_dict)
-				my_dict = transcode(ZlibCompressor, my_dict)
+				#my_dict = transcode(ZlibCompressor, my_dict)
 				# MPI.send(my_dict, levels[lev][idx_dst], lev, comm) # sends its dict
 				#send_large_data(my_dict, levels[lev][idx_dst], lev, comm)
                                 MPI.Send(UInt64(length(my_dict)), comm; dest=levels[lev][idx_dst], tag=lev)
