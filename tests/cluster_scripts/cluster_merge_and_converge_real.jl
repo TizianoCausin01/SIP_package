@@ -46,9 +46,11 @@ function generate_rand_dict(size_str, size_dict)
 	if 2^size_str < size_dict
 		@warn "the possible combinations of bits are less than the desired size of the dictionary"
 	end
-		my_dict = Dict{BitVector, UInt64}()
+	my_dict = Dict{SBitSet{B}, UInt64}()
+	#my_dict = Dict{BitVector, UInt64}()
 		for i in 1:size_dict
-			key = BitVector(rand(Bool, size_str))
+			key = SIP_package.convert(SBitSet{B}, BitVector(rand(Bool, size_str)))
+                        #key = BitVector(rand(Bool, size_str))
 			val = UInt64(rand(1:10000000))
 			my_dict[key] = val
 		end # for i in 1:size_dict
@@ -68,7 +70,7 @@ function wrapper_sampling_parallel(video_path, num_of_iterations, glider_coarse_
 	bin_vid = whole_video_conversion(video_path) # converts a target yt video into a binarized one
 	# preallocation of dictionaries
 	@info "$(Dates.format(now(), "HH:MM:SS")) worker $(rank) before sampling: free memory $(Sys.free_memory()/1024^3) max size by now: $(Sys.maxrss()/1024^3)"
-	counts_list = Vector{Dict{BitVector, UInt64}}(undef, num_of_iterations) # list of count_dicts of every iteration
+	counts_list = Vector{Dict{SBitSet{B}, UInt64}}(undef, num_of_iterations) # list of count_dicts of every iteration
 	coarse_g_iterations = Vector{BitArray}(undef, num_of_iterations) # list of all the videos at different levels of coarse graining
 	# further variables for coarse-graining
 	volume = glider_coarse_g_dim[1] * glider_coarse_g_dim[2] * glider_coarse_g_dim[3] #computes the volume of the solid

@@ -36,7 +36,10 @@ export wrapper_sampling,
 	get_fps,
 	centering_whitening,
 	mergers_convergence,
-	merge_vec_dicts
+	merge_vec_dicts,
+	B,
+	SBitSet,
+	convert
 
 # =========================
 # IMPORTED PACKAGES
@@ -52,6 +55,10 @@ using Images,
 	CodecZlib,
         Dates
 
+include("./SBitSet.jl")
+
+
+const B = 1 # number of 64-bits chunks for SBitSet
 # =========================
 # WRAPPER ALL
 # =========================
@@ -404,26 +411,22 @@ Outputs :
 			It stores the counts of windows configurations
 """
 function glider(bin_vid, glider_dim)
-	counts = Dict{BitVector, Int}()
+	counts = Dict{SBitSet{B}, Int}()
+	#counts = Dict{BitVector, Int}()
 	vid_dim = size(bin_vid)
-	idx_time = 1:1+glider_dim[3]-1
-	idx_cols = 1:1+glider_dim[2]-1
-	idx_rows = 1:1+glider_dim[1]-1
 	for i_time ∈ 1:vid_dim[3]-glider_dim[3] # step of sampling glider = 1
+		idx_time = i_time:i_time+glider_dim[3]-1
 		for i_cols ∈ 1:vid_dim[2]-glider_dim[2]
+			idx_cols = i_cols:i_cols+glider_dim[2]-1
 			for i_rows ∈ 1:vid_dim[1]-glider_dim[1]
-				#idx_rows[:] = i_rows:i_rows+glider_dim[1]-1
-				window = view(bin_vid, idx_rows, idx_cols, idx_time) # index in video, gets the current window and immediately vectorizes it. 
-				#counts = update_count(counts, vec(window))
-				vec_window = vec(window)
+				idx_rows = i_rows:i_rows+glider_dim[1]-1
+				#window = view(bin_vid, idx_rows, idx_cols, idx_time) # index in video, gets the current window and immediately vectorizes it. 
+				#vec_window = vec(window)
+				vec_window = convert(SBitSet{B}, vec(bin_vid[idx_rows, idx_cols, idx_time]))
+				#vec_window = vec(bin_vid[idx_rows, idx_cols, idx_time])
 				counts[vec_window] = get!(counts, vec_window, 0) + 1
-				idx_rows .+= 1
 			end # cols
-			idx_rows .-= vid_dim[1]-glider_dim[1]
-			idx_cols .+= 1
 		end # rows
-		idx_cols .-= vid_dim[2]-glider_dim[2]
-		idx_time .+= 1
 	end # time
 	bin_vid = nothing
 	#GC.gc()
@@ -1405,7 +1408,7 @@ INPUT:
 - num_of_iterations::Int -> number of iterations of coarse-graining done
 """
 function merge_vec_dicts(tot_dicts, new_dicts, num_of_iterations)
-	if new_dicts == nothing # there is no need for a condition upon tot_dicts because it can't be that the dict lower in the scale should always have something or if it doesn't have anything, the other doesn't have anything too
+	if isnothing(new_dicts) # there is no need for a condition upon tot_dicts because it can't be that the dict lower in the scale should always have something or if it doesn't have anything, the other doesn't have anything too
 		return nothing # dnt care about what the function returns, it actually means nothing since it changes stuff in place
 	# elseif tot_dicts == nothing && new_dicts != nothing
 	# 	return new_dicts
