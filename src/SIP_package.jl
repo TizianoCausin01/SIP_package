@@ -199,7 +199,7 @@ function whole_video_conversion(path2file::String)::BitArray{3}
 	median_value = median(gray_array)
 	@. array_bits = gray_array > median_value # broadcasts the value in the preallocated array
 	gray_array = nothing
-	GC.gc()
+	#GC.gc()
 	return array_bits
 end # EOF
 
@@ -420,7 +420,7 @@ function glider(bin_vid, glider_dim)
 		end # rows
 	end # time
 	bin_vid = nothing
-	GC.gc()
+	#GC.gc()
 	return counts
 end # EOF
 

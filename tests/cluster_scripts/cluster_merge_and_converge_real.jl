@@ -24,7 +24,7 @@ mergers = 2:(1+n_mergers)
 workers = (1+mergers[end]):(nproc-1)
 name_vid = ARGS[1]
 split_folder = "/leonardo_scratch/fast/Sis25_piasini/tcausin/SIP_data/$(name_vid)_split"
-results_path = "/leonardo_scratch/fast/Sis25_piasini/tcausin/SIP_results"#"/leonardo_scratch/fast/Sis25_piasini/epiasini/tiziano_test_results"
+results_path = "/leonardo_scratch/fast/Sis25_piasini/epiasini/tiziano_test_results"#"/leonardo_scratch/fast/Sis25_piasini/tcausin/SIP_results"#
 split_files = "$(split_folder)/$(name_vid)%03d.mp4"
 files_names = readdir(split_folder)#[1:53]
 n_tasks = length(files_names) # also the length of it
@@ -76,8 +76,8 @@ function fake_glider(bin_vid, glider_dim)
 	# 	end # rows
 	# end # time
 	# bin_vid = nothing
-	# GC.gc()
-        counts = generate_rand_dict(27,500)
+	# #GC.gc()
+        counts = generate_rand_dict(27,5000000)
 	return counts
 end # EOF
 
