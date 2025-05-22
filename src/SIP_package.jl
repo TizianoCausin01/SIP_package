@@ -409,18 +409,21 @@ function glider(bin_vid, glider_dim)
 	idx_time = 1:1+glider_dim[3]-1
 	idx_cols = 1:1+glider_dim[2]-1
 	idx_rows = 1:1+glider_dim[1]-1
-	for i_time ∈ 1:vid_dim[3]-glider_dim[3] # step of sampling glider = 1 
-		idx_time[:] = i_time:i_time+glider_dim[3]-1 # you have to subtract one, otherwise you will end up getting a bigger glider
+	for i_time ∈ 1:vid_dim[3]-glider_dim[3] # step of sampling glider = 1
 		for i_cols ∈ 1:vid_dim[2]-glider_dim[2]
-			idx_cols[:] = i_cols:i_cols+glider_dim[2]-1
 			for i_rows ∈ 1:vid_dim[1]-glider_dim[1]
-				idx_rows[:] = i_rows:i_rows+glider_dim[1]-1
+				#idx_rows[:] = i_rows:i_rows+glider_dim[1]-1
 				window = view(bin_vid, idx_rows, idx_cols, idx_time) # index in video, gets the current window and immediately vectorizes it. 
 				#counts = update_count(counts, vec(window))
 				vec_window = vec(window)
 				counts[vec_window] = get!(counts, vec_window, 0) + 1
+				idx_rows .+= 1
 			end # cols
+			idx_rows .-= vid_dim[1]-glider_dim[1]
+			idx_cols .+= 1
 		end # rows
+		idx_cols .-= vid_dim[2]-glider_dim[2]
+		idx_time .+= 1
 	end # time
 	bin_vid = nothing
 	#GC.gc()
