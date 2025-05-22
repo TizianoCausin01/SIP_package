@@ -1,9 +1,5 @@
 # master, workers, mergers, master_merger
 # master: allocates jobs
-#using Pkg
-#cd("/leonardo/home/userexternal/tcausin0/virtual_envs/SIP_dev")
-#Pkg.activate(".")
-
 using SIP_package
 using MPI
 using JSON
@@ -60,24 +56,7 @@ function generate_rand_dict(size_str, size_dict)
 end # EOF
 
 function fake_glider(bin_vid, glider_dim)
-	# counts = Dict{BitVector, Int}()
-	# vid_dim = size(bin_vid)
-	# for i_time ∈ 1:vid_dim[3]-glider_dim[3] # step of sampling glider = 1 
-	# 	idx_time = i_time:i_time+glider_dim[3]-1 # you have to subtract one, otherwise you will end up getting a bigger glider
-	# 	for i_cols ∈ 1:vid_dim[2]-glider_dim[2]
-	# 		idx_cols = i_cols:i_cols+glider_dim[2]-1
-	# 		for i_rows ∈ 1:vid_dim[1]-glider_dim[1]
-	# 			idx_rows = i_rows:i_rows+glider_dim[1]-1
-	# 			window = view(bin_vid, idx_rows, idx_cols, idx_time) # index in video, gets the current window and immediately vectorizes it. 
-	# 			#counts = update_count(counts, vec(window))
-	# 			vec_window = vec(window)
-	# 			counts[vec_window] = get!(counts, vec_window, 0) + 1
-	# 		end # cols
-	# 	end # rows
-	# end # time
-	# bin_vid = nothing
-	# #GC.gc()
-        counts = generate_rand_dict(27,5000000)
+        counts = generate_rand_dict(27,500)
 	return counts
 end # EOF
 
@@ -136,8 +115,6 @@ if rank == root # I am root
 	task_counter_root = 1 # starts from 1, takes note of the level at which we have arrived
 	
 	while task_counter_root <= n_tasks
-		# this is probably just an MPI.Scatter??
-
 		# wait till one worker tells me they are ready to do work
 		ack, status = MPI.Recv(Int32, comm, MPI.Status; source=MPI.ANY_SOURCE, tag=32)
 		# give some work to do to that worker
@@ -145,39 +122,6 @@ if rank == root # I am root
 		MPI.Send(Int32(task_counter_root), comm; dest=status.source, tag=32)
 		global task_counter_root += 1
 	end
-	
-	# # initialization
-	# for dst in workers # loops over all the processes other than root (0th) and merger (nproc-1)
-	# 	MPI.Send(Int32(task_counter_root), comm; dest=dst, tag=32) # sends the task to each process
-	# 	global task_counter_root += 1 # updates the task_counter
-	# 	if task_counter_root > n_tasks # in case the number of processes are more than the number of tasks, we will use less processes (we escape the initialization before)
-	# 		break
-	# 	end # task_counter_root > n_tasks
-	# end # for dst in 1:(nproc-2)
-        # while task_counter_root <= n_tasks # until we exhaust all tasks
-        #         ack, status = MPI.Recv(Int32, comm, MPI.Status; source=MPI.ANY_SOURCE, tag=32) # tag 32 is reserved for communications between root and workers
-	# 	global task_counter_root += 1
-	# 	if task_counter_root > n_tasks
-	# 		break
-	# 	end
-	# 	MPI.Send(Int32(task_counter_root), comm; dest=status.source, tag=32)
-	# end
-		
-	# 	for dst in workers # loops over all the workers (mergers excluded)
-	# 		ismessage, status = MPI.Iprobe(dst, dst + 32, comm) # root checks if it has received any message from the dst (in this case dst is the source of the feedback message, but originally it was the dst of the task allocation)
-	# 		if ismessage # if there is any message to receive
-	# 			ack = Vector{Int32}(undef, 1) # preallocates recv buffer
-	# 			MPI.Irecv!(ack, dst, dst + 32, comm) # receives the message, to reset MPI.Iprobe
-	# 			if task_counter_root > n_tasks # in case we surpass n_tasks within the for loop
-	# 				break
-	# 			end # if task_counter > n_tasks
-	# 			MPI.Isend(Int32(tasks[task_counter_root]), dst, dst + 32, comm) # sends the new task to the free process
-	# 			global task_counter_root += 1
-	# 			@info "root: $task_counter_root"
-	# 		end # if ismessage
-	# 	end # for dst in 1:(nproc-2)
-	# end # while task_counter_root <= n_tasks
-	# termination 
 	for dst in workers # sends a message to all the workers
 		MPI.Send(Int32(-1), comm; dest=dst, tag=32) # signal to stop
 	end # for dst in 1:(nproc-2)
@@ -198,16 +142,7 @@ elseif rank == master_merger # I am master merger
 			@info "$(Dates.format(now(), "HH:MM:SS")) master_merger: I have an available merger $idx_free_merger; waiting for a worker"
 			msg, status = MPI.Recv(Int32, comm, MPI.Status; source=MPI.ANY_SOURCE, tag=100)
 			push!(completed_tasks, msg)
-			@info "$(Dates.format(now(), "HH:MM:SS")) master_merger: a new worker finished. Here are the tasks completed till now: $(sort(completed_tasks))"
-			
-		# for src in work_merge # probes/ receives from all the workers and the mergers
-		# 	ismessage, status = MPI.Iprobe(src, src + 100, comm)
-		# 	if ismessage
-		# 		ask = Vector{Int32}(undef, 1) # preallocates recv buffer
-		# 		req_ask = MPI.Irecv!(ask, src, src + 100, comm)
-		#		ask = ask[1]
-		#if ask == 0 # comes from worker that requires a merger
-			# @info "master merger received a req from worker $(src)"
+			@info "$(Dates.format(now(), "HH:MM:SS")) master_merger: a new worker $(status.source) finished. So far, we have completed $(length(completed_tasks))/$n_tasks tasks. Here are the tasks completed till now: $(sort(completed_tasks))"
 			idx_free_merger = findfirst(traffic_light) # TODO: shouldn't this be picked at random?
 			free_merger = mergers[idx_free_merger]
 			MPI.Send(Int32(status.source), comm; dest=free_merger, tag=200) # sends a signal to the free merger
@@ -225,17 +160,14 @@ elseif rank == master_merger # I am master merger
 			@info "$(Dates.format(now(), "HH:MM:SS")) new_free_merger $(idx_new_free_merger)"
 			global traffic_light[idx_new_free_merger] = true # makes the merger available
 			@info "$(Dates.format(now(), "HH:MM:SS")) traffic_light now $(traffic_light)"
-			#global task_counter_merger += 1
-			#@info "$(Dates.format(now(), "HH:MM:SS")) task_counter_merger $(task_counter_merger)"
 		
 		end # if free_merger == nothing
-		#@info "$(Dates.format(now(), "HH:MM:SS")) traffic_light $traffic_light; task_counter_merger $task_counter_merger"
+
 	end # while task_counter_merger <= n_tasks
-	#@info "$(Dates.format(now(), "HH:MM:SS")) done with the mergers, I did more than $n_tasks. traffic_light $traffic_light; task_counter_merger $task_counter_merger"
 	for mer in mergers
 		MPI.Send(Int32(-1), comm; dest=mer, tag=200)
 	end # for mer in mergers
-#FIXME add stopping condition
+
 
 
 elseif in(rank, mergers) # I am merger
@@ -245,21 +177,11 @@ elseif in(rank, mergers) # I am merger
 	global task_counter_merger = 1
 	while !stop
 		src_worker = MPI.Recv(Int32, comm; source=master_merger, tag=200)
-		# ismessage, status = MPI.Iprobe(master_merger, rank + 200, comm) # while free probes for a signal to merge
-		# if ismessage
-		# 	src_worker = Vector{Int32}(undef, 1) # preallocates recv buffer
-		# 	req_src_worker = MPI.Irecv!(src_worker, master_merger, rank + 200, comm) # it's receiving the worker that will send the dict
-		# 	MPI.Wait(req_src_worker)
-		#	src_worker = src_worker[1]
 		@info "$(Dates.format(now(), "HH:MM:SS")) merger $(rank):received a req from master"
 		if src_worker == -1 # end signal from master_merger
 			global stop = true
 		else
 			length_mex = MPI.Recv(Int32, comm; source=src_worker, tag=64)
-			#length_mex = Vector{Int32}(undef, 1) # preallocates recv buffer
-			#MPI.Probe(src_worker, rank + 64, comm) # waits until the dict arrives from the worker
-			#req_len = MPI.Irecv!(length_mex, src_worker, rank + 64, comm) # it's receiving the length of the dict
-			#MPI.Wait(req_len)
 			if @isdefined dict_buffer
 				# we recycle the memory allotted to dict_buffer from one iteration to the next
 				resize!(dict_buffer, length_mex)
@@ -268,7 +190,6 @@ elseif in(rank, mergers) # I am merger
 			end
 				
 			MPI.Recv!(dict_buffer, comm; source=src_worker, tag=32)
-			#MPI.Wait(dict_arrives)
 			@info "$(Dates.format(now(), "HH:MM:SS")) merger $(rank): received dict from $(src_worker)"
 			dict_decomp = transcode(ZlibDecompressor, dict_buffer)
 			dict_decomp = MPI.deserialize(dict_decomp)
@@ -279,9 +200,6 @@ elseif in(rank, mergers) # I am merger
 			else
 				merge_vec_dicts(tot_dicts, dict_decomp, num_of_iterations)
 				@info "$(Dates.format(now(), "HH:MM:SS")) merger $(rank): processed $(task_counter_merger) chunks out of $(n_tasks)"
-				# dict_buffer = nothing
-                                #GC.gc()
-				#@info "merger $(rank): free memory $(Sys.free_memory()/1024^3), size dict $((Base.summarysize(tot_dicts))/1024^3) after GC, max size by now: $(Sys.maxrss()/1024^3)   $(Dates.format(now(), "HH:MM:SS"))"
 				flush(stdout)
 			end # if src_worker == -1
 			global task_counter_merger += 1
@@ -313,43 +231,20 @@ else # I am worker
 		current_data = MPI.Recv(Int32, comm; source=root, tag=32)
 		@info "$(Dates.format(now(), "HH:MM:SS")) rank $(rank): current_data $current_data"
 		
-		# ismessage, status = MPI.Iprobe(root, rank + 32, comm) # checks if there is a message from root
-		# if ismessage # if there is something to receive
-		# 	current_data = Vector{Int32}(undef, 1) # receive buffer
-		# 	MPI.Irecv!(current_data, root, rank + 32, comm) # receives tasks
-		# 	current_data = current_data[1] # takes just the first element of the vector (it's a vector because it's a receive buffer)
-		# 	@info "rank $(rank): current_data $(current_data[1])"
 		if current_data != -1 # if the message isn't the termination message
 			current_dict = wrapper_sampling_parallel(joinpath(split_folder, files_names[current_data]), num_of_iterations, glider_coarse_g_dim, glider_dim)
 			current_dict = MPI.serialize(current_dict)
 			current_dict = transcode(ZlibCompressor, current_dict)
 			length_dict = Int32(length(current_dict))
-			#no_merger = true
-                            
-			#while no_merger == true # loops until it gets a free merger (this is because the mergers may be busy)
-			MPI.Send(Int32(current_data), comm; dest=master_merger, tag=100) # sends request to master_merger # FIXME it sends the request but the master_merger doesn't receive it
-			#MPI.wait(ask_req) # waits until the reception of the request
-			#@info "worker $(rank): request sent"
-			#MPI.Probe(master_merger, rank + 101, comm) # blocking operation because otherwise it keeps looping 
-			#@info "worker request received"
-			#global target_merger = Vector{Int32}(undef, 1) # preallocates recv buffer
+			MPI.Send(Int32(current_data), comm; dest=master_merger, tag=100) # sends request to master_merger
                         target_merger = MPI.Recv(Int32, comm; source=master_merger, tag=100)
-                        #MPI.Irecv!(target_merger, master_merger, rank + 101, comm)
-			#global target_merger = target_merger[1]
-				# if target_merger != -1
-				# 	no_merger = false
-				#end # if target_merger != -1
-			#end # while no_merger == true
 			MPI.Send(length_dict, comm; dest=target_merger, tag=64) # sends length of dict to merger for preallocation but with another tag (on another frequency)
-			#MPI.wait(len_req)
 			MPI.Send(current_dict, comm; dest=target_merger, tag=32) # sends dict to merger
-			#MPI.wait(dict_req)
 			@info "$(Dates.format(now(), "HH:MM:SS")) worker $(rank) sent mex to $(target_merger)"
 			MPI.Send(Int32(0), comm; dest=root, tag=32) # sends message to root
 			@info "$(Dates.format(now(), "HH:MM:SS")) worker $(rank): free memory $(Sys.free_memory()/1024^3), size dict $((Base.summarysize(current_dict))/1024^3), max size by now: $(Sys.maxrss()/1024^3)"
 			current_dict = nothing
 			#GC.gc()
-			#@info "worker $(rank): free memory $(Sys.free_memory()/1024^3), max size by now: $(Sys.maxrss()/1024^3)   $(Dates.format(now(), "HH:MM:SS")) after GC"
 
 			flush(stdout)
 		else # if it's -1 
