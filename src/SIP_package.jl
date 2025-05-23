@@ -36,7 +36,10 @@ export wrapper_sampling,
 	get_fps,
 	centering_whitening,
 	mergers_convergence,
-	merge_vec_dicts
+	merge_vec_dicts,
+	B,
+	SBitSet,
+	convert
 
 # =========================
 # IMPORTED PACKAGES
@@ -49,8 +52,13 @@ using Images,
 	JSON,
 	LinearAlgebra,
 	MPI,
-	CodecZlib
+	CodecZlib,
+        Dates
 
+include("./SBitSet.jl")
+
+
+const B = 1 # number of 64-bits chunks for SBitSet
 # =========================
 # WRAPPER ALL
 # =========================
@@ -85,7 +93,7 @@ function wrapper_sampling(video_path::String, results_path::String, file_name::S
 
 	coarse_g_iterations[1] = bin_vid # stores iteration 0
 	for iter_idx ∈ 1:num_of_iterations
-		@info "running iteration $iter_idx"
+		@info "$(Dates.format(now(), "HH:MM:SS")) running iteration $iter_idx"
 		@time begin
 			# samples the current iteration
 			counts_list[iter_idx] = glider(coarse_g_iterations[iter_idx], glider_dim) # samples the current iteration
@@ -198,7 +206,7 @@ function whole_video_conversion(path2file::String)::BitArray{3}
 	median_value = median(gray_array)
 	@. array_bits = gray_array > median_value # broadcasts the value in the preallocated array
 	gray_array = nothing
-	GC.gc()
+	#GC.gc()
 	return array_bits
 end # EOF
 
@@ -403,23 +411,25 @@ Outputs :
 			It stores the counts of windows configurations
 """
 function glider(bin_vid, glider_dim)
-	counts = Dict{BitVector, Int}()
+	counts = Dict{SBitSet{B}, Int}()
+	#counts = Dict{BitVector, Int}()
 	vid_dim = size(bin_vid)
-	for i_time ∈ 1:vid_dim[3]-glider_dim[3] # step of sampling glider = 1 
-		idx_time = i_time:i_time+glider_dim[3]-1 # you have to subtract one, otherwise you will end up getting a bigger glider
+	for i_time ∈ 1:vid_dim[3]-glider_dim[3] # step of sampling glider = 1
+		idx_time = i_time:i_time+glider_dim[3]-1
 		for i_cols ∈ 1:vid_dim[2]-glider_dim[2]
 			idx_cols = i_cols:i_cols+glider_dim[2]-1
 			for i_rows ∈ 1:vid_dim[1]-glider_dim[1]
 				idx_rows = i_rows:i_rows+glider_dim[1]-1
-				window = view(bin_vid, idx_rows, idx_cols, idx_time) # index in video, gets the current window and immediately vectorizes it. 
-				#counts = update_count(counts, vec(window))
-				vec_window = vec(window)
+				#window = view(bin_vid, idx_rows, idx_cols, idx_time) # index in video, gets the current window and immediately vectorizes it. 
+				#vec_window = vec(window)
+				vec_window = convert(SBitSet{B}, vec(bin_vid[idx_rows, idx_cols, idx_time]))
+				#vec_window = vec(bin_vid[idx_rows, idx_cols, idx_time])
 				counts[vec_window] = get!(counts, vec_window, 0) + 1
 			end # cols
 		end # rows
 	end # time
 	bin_vid = nothing
-	GC.gc()
+	#GC.gc()
 	return counts
 end # EOF
 
@@ -1096,7 +1106,7 @@ function meg_sampling(bin_signal::BitVector, num_of_iterations::Int, glider_coar
 	cutoff = glider_coarse_g_dim / 2 # sets the cutoff for the majority rule 
 	coarse_g_iterations[1] = bin_signal # stores iteration 0
 	for iter_idx ∈ 1:num_of_iterations
-		@info "running iteration $iter_idx"
+		@info "$(Dates.format(now(), "HH:MM:SS")) running iteration $iter_idx"
 		# samples the current iteration
 		counts_list[iter_idx] = meg_glider(coarse_g_iterations[iter_idx], glider_dim) # samples the current iteration
 		if iter_idx < num_of_iterations
@@ -1272,13 +1282,13 @@ function centering_whitening(X, tol)
 
 	# Compute the covariance matrix
 	C = cov(X_centered)
-	@info "$(size(C))"
+	@info "$(Dates.format(now(), "HH:MM:SS")) $(size(C))"
 
 	# Eigen-decomposition of the covariance matrix
 	F = eigen(C)
 	evals = F.values
 	neg_idx = evals .< tol
-	@info "$neg_idx"
+	@info "$(Dates.format(now(), "HH:MM:SS")) $neg_idx"
 	evals[neg_idx] .= tol
 
 	# Only retain positive eigenvalues (to avoid numerical issues with small negative eigenvalues)
@@ -1314,33 +1324,40 @@ none
 """
 function mergers_convergence(rank, mergers_arr, my_dict, num_of_iterations, results_folder, name_vid, comm)
 	levels = get_steps_convergence(mergers_arr)
-	@info "proc $(rank) before converging: free memory $(Sys.free_memory()/1024^3)"
+	@info "$(Dates.format(now(), "HH:MM:SS")) proc $(rank) before converging: free memory $(Sys.free_memory()/1024^3)"
 	if rank == mergers_arr[1]
-		@info "levels: $(levels)"
+		@info "$(Dates.format(now(), "HH:MM:SS")) levels: $(levels)"
 	end # if rank==0
+        new_dict_buffer = Vector{UInt8}(undef, 1)
 	for lev in 1:(length(levels)-1) # stops before the last el in levels
 		if in(rank, levels[lev]) # if the process is within the current levels iteration (otherwise it has already sent its dict)
 			if in(rank, levels[lev+1]) # in case it is a receiver (odd-indexed, it will be present also in the nxt step)
 				if rank + 1 <= levels[lev][end] # for the margins, it lets pass only the processes that have someone above, otherwise there is no merging at that step for the margin
 					idx_src = findfirst(rank .== levels[lev]) + 1 # computes the index of the source process (one idx up the idx of the process)
 					# new_dict, status = MPI.recv(levels[lev][idx_src], lev, comm) # receives the new dict
-					new_dict = rec_large_data(levels[lev][idx_src], lev, comm)
-					new_dict = transcode(ZlibDecompressor, new_dict)
-					new_dict = MPI.deserialize(new_dict)
+					#new_dict = rec_large_data(levels[lev][idx_src], lev, comm)
+                                        new_dict_length = MPI.Recv(Int64, comm; source=levels[lev][idx_src], tag=lev)
+				        # we recycle the memory allotted to dict_buffer from one iteration to the next
+				        resize!(new_dict_buffer, new_dict_length)
+                                        MPI.Recv!(new_dict_buffer, comm; source=levels[lev][idx_src], tag=lev)
+					#new_dict = transcode(ZlibDecompressor, new_dict_buffer)
+					new_dict = MPI.deserialize(new_dict_buffer)
 					merge_vec_dicts(my_dict, new_dict, num_of_iterations)
 					new_dict = nothing
-					GC.gc()
-					@info "rank $(rank): merged with dict from rank $(levels[lev][idx_src])"
+					#GC.gc()
+					@info "$(Dates.format(now(), "HH:MM:SS")) rank $(rank): merged with dict from rank $(levels[lev][idx_src])"
 				end # if proc + 1 <= length(mergers) 
 			else
 				idx_dst = findfirst(rank .== levels[lev]) - 1 # finds the idx of the receiver (one idx below its)
 				my_dict = MPI.serialize(my_dict)
-				my_dict = transcode(ZlibCompressor, my_dict)
+				#my_dict = transcode(ZlibCompressor, my_dict)
 				# MPI.send(my_dict, levels[lev][idx_dst], lev, comm) # sends its dict
-				send_large_data(my_dict, levels[lev][idx_dst], lev, comm)
+				#send_large_data(my_dict, levels[lev][idx_dst], lev, comm)
+                                MPI.Send(UInt64(length(my_dict)), comm; dest=levels[lev][idx_dst], tag=lev)
+                                MPI.Send(my_dict, comm; dest=levels[lev][idx_dst], tag=lev)
 				my_dict = nothing
-				GC.gc()
-				@info "proc $(rank) after converging: free memory $(Sys.free_memory()/1024^3)"
+				#GC.gc()
+				@info "$(Dates.format(now(), "HH:MM:SS")) proc $(rank) after converging: free memory $(Sys.free_memory()/1024^3)"
 			end # if in(rank, lev)
 		end # if in(rank, levels[lev])
 	end # for lev in levels
@@ -1391,7 +1408,7 @@ INPUT:
 - num_of_iterations::Int -> number of iterations of coarse-graining done
 """
 function merge_vec_dicts(tot_dicts, new_dicts, num_of_iterations)
-	if new_dicts == nothing # there is no need for a condition upon tot_dicts because it can't be that the dict lower in the scale should always have something or if it doesn't have anything, the other doesn't have anything too
+	if isnothing(new_dicts) # there is no need for a condition upon tot_dicts because it can't be that the dict lower in the scale should always have something or if it doesn't have anything, the other doesn't have anything too
 		return nothing # dnt care about what the function returns, it actually means nothing since it changes stuff in place
 	# elseif tot_dicts == nothing && new_dicts != nothing
 	# 	return new_dicts
@@ -1411,19 +1428,19 @@ function send_large_data(data, dst, tag, comm)
 	onsets = collect(0:2000000000:size_data)
 	status = MPI.send(UInt32(length(onsets)), dst, tag, comm)
 	append!(onsets, size_data)
-	@info "onsets $(onsets)"
+	@info "$(Dates.format(now(), "HH:MM:SS")) onsets $(onsets)"
 	count = 0
 	for ichunk in 1:length(onsets)-1
 		chunk = data[onsets[ichunk]+1:onsets[ichunk+1]]
 		count += 1
 		status = MPI.send(chunk, dst, tag + count, comm)
-		@info "sent chunk from $(onsets[ichunk]) to $(onsets[ichunk+1])"
+		@info "$(Dates.format(now(), "HH:MM:SS")) sent chunk from $(onsets[ichunk]) to $(onsets[ichunk+1])"
 	end # for ichunk in 1:length(onsets)-1
-	@info "things sent: $(count)"
+	@info "$(Dates.format(now(), "HH:MM:SS")) things sent: $(count)"
 end #EOF
 function rec_large_data(src, tag, comm)
 	len_onsets, status = MPI.recv(src, tag, comm)
-	@info "len_onsets $(len_onsets)"
+	@info "$(Dates.format(now(), "HH:MM:SS")) len_onsets $(len_onsets)"
 	if len_onsets == 1
 		tot_steps = 1
 	else
@@ -1435,10 +1452,10 @@ function rec_large_data(src, tag, comm)
 		count += 1
 		chunk, status = MPI.recv(src, tag + count, comm)
 		append!(data_rec, chunk)
-		@info "received chunk of size $(length(chunk))"
-		@info "size current data_rec: $(length(data_rec))"
+		@info "$(Dates.format(now(), "HH:MM:SS")) received chunk of size $(length(chunk))"
+		@info "$(Dates.format(now(), "HH:MM:SS")) size current data_rec: $(length(data_rec))"
 	end # for ichunk in 1:length_onsets-1
-	@info "things received: $(count)"
+	@info "$(Dates.format(now(), "HH:MM:SS")) things received: $(count)"
 	return data_rec
 end #EOF
 
