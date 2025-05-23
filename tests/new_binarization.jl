@@ -4,7 +4,6 @@ Pkg.activate(".")
 using Statistics
 using SIP_package
 ##
-##
 name_vid = "test_venice_long"
 split_folder = "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/data_repo/SIP_data/$(name_vid)_split/"
 split_files = "$(split_folder)/$(name_vid)001.mp4"

@@ -7,7 +7,6 @@ using Dates
 using CodecZlib
 const Int = Int32
 ##
-
 # vars for parallel
 MPI.Init()
 comm = MPI.COMM_WORLD

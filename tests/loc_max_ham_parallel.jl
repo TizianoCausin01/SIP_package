@@ -2,7 +2,7 @@
 # mpiexec -np 6 julia /Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_package/tests/loc_max_parallel.jl
 ##
 using Pkg
-cd("/leonardo/home/userexternal/tcausin0/virtual_envs/SIP_dev")
+cd("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_package/SIP_dev/")
 Pkg.activate(".")
 
 ##
@@ -27,17 +27,13 @@ num_of_iterations = 5
 file_name = ARGS[1]
 glider_coarse_g_dim = Tuple(parse(Int, ARGS[i]) for i in 2:4)
 glider_dim = Tuple(parse(Int, ARGS[i]) for i in 5:7)
-results_path = "/leonardo_scratch/fast/Sis25_piasini/tcausin/SIP_results/$(file_name)_counts_cg_$(glider_coarse_g_dim[1])x$(glider_coarse_g_dim[2])x$(glider_coarse_g_dim[3])_win_$(glider_dim[1])x$(glider_dim[2])x$(glider_dim[3])"
-loc_max_path = "$(results_path)/loc_max_$(file_name)"
+ham_dist = ARGS[8]
+results_path = "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/data_repo/SIP_results/$(file_name)_counts_cg_$(glider_coarse_g_dim[1])x$(glider_coarse_g_dim[2])x$(glider_coarse_g_dim[3])_win_$(glider_dim[1])x$(glider_dim[2])x$(glider_dim[3])"
+loc_max_path = "$(results_path)/loc_max_ham_$(ham_dist)_$(file_name)"
 
 for iter_idx in 1:num_of_iterations
 	dict_path = "$(results_path)/counts_$(file_name)_iter$(iter_idx).json"
-	@info "rank $rank before loading dict"
 	myDict = json2dict(dict_path)
-	@info "rank $rank dict loaded"
-	if rank == root
-		@info "iter $(iter_idx) has a dict with $(length(myDict)) keys"
-	end
 	percentile = 10
 	top_counts = get_top_windows(myDict, percentile)
 	tot_counts = length(top_counts)
@@ -46,7 +42,7 @@ for iter_idx in 1:num_of_iterations
 	if rank == root # I am root
 		global current_start = Int32(0) # is the number of iterations we will drop before our target, that's why we start from 0 
 		for dst in 1:(nproc-1) # loops over the processors to deal the task
-			MPI.Isend(Int32(current_start), dst, dst + 32, comm)
+			MPI.Isend(current_start, dst, dst + 32, comm)
 			global current_start += jump
 		end # for i_deal in 1:(nproc-1)
 
@@ -67,7 +63,6 @@ for iter_idx in 1:num_of_iterations
 						max_list_ser = transcode(ZlibDecompressor, array_buffer)
 						max_list = MPI.deserialize(max_list_ser)
 						append!(tot_list, max_list)
-						@info "received list from process $(src)"
 					end # length_mex[1] != 0
 					global counter_done_procs += 1
 				end # if ismessage_len & ismessage
@@ -79,7 +74,7 @@ for iter_idx in 1:num_of_iterations
 			mkpath(loc_max_path) # if not, it creates the folder where to put the split_files
 		end # if !isdir(dir_path)        
 
-		open("$(loc_max_path)/loc_max_$(file_name)_iter$(iter_idx).json", "w") do file
+		open("$(loc_max_path)/loc_max_ham_$(ham_dist)_$(file_name)_iter$(iter_idx).json", "w") do file
 			JSON.print(file, loc_max_dict)
 		end # open counts
 
@@ -91,12 +86,12 @@ for iter_idx in 1:num_of_iterations
 				start = Vector{Int32}(undef, 1) # receive buffer
 				MPI.Irecv!(start, root, rank + 32, comm) # receives stuff
 				start = start[1] # takes just the first element of the vector (it's a vector because it's a receive buffer)
-				loc_max = parallel_get_loc_max(myDict, top_counts, start, jump)
+				loc_max = parallel_get_loc_max_ham(myDict, top_counts, start, jump, ham_dist)
+				# SEND STUFF TO THE ROOT ( you have to serialize the matrix of Bool first)
 				mex = MPI.serialize(loc_max)
 				mex_comp = transcode(ZlibCompressor, mex)
 				len_mex = Int32(length(mex_comp))
 				len_req = MPI.Isend(len_mex, root, rank + 64, comm)
-				@info "rank $(rank) sends list of length $(len_mex)"
 				MPI.Wait(len_req)
 				MPI.Isend(mex_comp, root, rank + 32, comm)
 				global stop = 1 # to break the while loop

@@ -3,7 +3,7 @@
 # use dicts to speed up before real sampling and presend the sizes for preallocation
 ## initialization
 using Pkg
-cd("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_package/SIP_dev")
+cd("/leonardo/home/userexternal/tcausin0/virtual_envs/SIP_dev")
 Pkg.activate(".")
 
 using SIP_package
@@ -11,7 +11,7 @@ using MPI
 using JSON
 using Dates
 using CodecZlib
-
+const Int = Int32
 ##
 # vars for parallel
 MPI.Init()
@@ -21,14 +21,11 @@ nproc = MPI.Comm_size(comm) # to establish the total number of processes used
 root = 0
 merger = nproc - 1
 name_vid = ARGS[1]
-path2original = "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/data_repo/SIP_data/$(name_vid).mp4"
-split_folder = "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/data_repo/SIP_data/$(name_vid)_split"
-split_files = "$(split_folder)/$(name_vid)%03d.mp4"
-results_path = "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/data_repo/SIP_results/"
-# split_folder = "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/data_repo/SIP_results/counts"
+split_folder = "/leonardo_scratch/fast/Sis25_piasini/tcausin/SIP_data/$(name_vid)_split"
+results_path = "/leonardo_scratch/fast/Sis25_piasini/tcausin/SIP_results"
 files_names = readdir(split_folder)
 n_tasks = length(files_names) # also the length of it
-tasks = 1:n_tasks
+tasks = Int32.(1:n_tasks)
 # vars for sampling
 num_of_iterations = 5 # counting the 0th iteration
 glider_coarse_g_dim = Tuple(parse(Int, ARGS[i]) for i in 2:4)
@@ -43,6 +40,7 @@ end #if rank==root
 function wrapper_sampling_parallel(video_path, num_of_iterations, glider_coarse_g_dim, glider_dim)
 	# video conversion into BitArray
 	@info "proc $(rank): running binarization   $(Dates.format(now(), "HH:MM:SS"))"
+	flush(stdout)
 	bin_vid = whole_video_conversion(video_path) # converts a target yt video into a binarized one
 	# preallocation of dictionaries
 	counts_list = Vector{Dict{BitVector, UInt64}}(undef, num_of_iterations) # list of count_dicts of every iteration
@@ -53,7 +51,6 @@ function wrapper_sampling_parallel(video_path, num_of_iterations, glider_coarse_
 
 	old_vid = bin_vid # stores iteration 0 #THIS WILL BECOME OLD VID and THE OTHER NEW VID
 	bin_vid = nothing
-	# @info "proc $(rank): running sampling   $(Dates.format(now(), "HH:MM:SS"))"
 	for iter_idx ∈ 1:num_of_iterations
 		# samples the current iteration
 		counts_list[iter_idx] = glider(old_vid, glider_dim) # samples the current iteration
@@ -78,44 +75,6 @@ function wrapper_sampling_parallel(video_path, num_of_iterations, glider_coarse_
 	end # for
 	return counts_list
 end # EOF
-
-
-##
-# function wrapper_sampling_parallel(video_path, num_of_iterations, glider_coarse_g_dim, glider_dim)
-# 	# video conversion into BitArray
-# 	@info "proc $(rank): running binarization   $(Dates.format(now(), "HH:MM:SS"))"
-# 	bin_vid = whole_video_conversion(video_path) # converts a target yt video into a binarized one
-# 	# preallocation of dictionaries
-# 	counts_list = Vector{Dict{BitVector, UInt64}}(undef, num_of_iterations) # list of count_dicts of every iteration
-# 	coarse_g_iterations = Vector{BitArray}(undef, num_of_iterations) # list of all the videos at different levels of coarse graining
-# 	# further variables for coarse-graining
-# 	volume = glider_coarse_g_dim[1] * glider_coarse_g_dim[2] * glider_coarse_g_dim[3] #computes the volume of the solid
-# 	cutoff = volume / 2 # sets the cutoff for the majority rule 
-
-# 	coarse_g_iterations[1] = bin_vid # stores iteration 0
-# 	@info "proc $(rank): running sampling   $(Dates.format(now(), "HH:MM:SS"))"
-# 	for iter_idx ∈ 1:num_of_iterations
-# 		# samples the current iteration
-# 		counts_list[iter_idx] = glider(coarse_g_iterations[iter_idx], glider_dim) # samples the current iteration
-# 		# coarse-graining of the current iteration
-# 		if iter_idx < num_of_iterations
-# 			old_dim = size(coarse_g_iterations[iter_idx]) # gets the dimensions of the current iteration
-# 			new_dim = get_new_dimensions(old_dim, glider_coarse_g_dim) # computes the dimensions of the next iteration
-# 			# creates a 3D tuple of vectors with the steps the coarse-graining glider will have to do
-# 			steps_coarse_g = compute_steps_glider(glider_coarse_g_dim, old_dim) # precomputes the steps of the coarse-graining glider
-# 			coarse_g_iterations[iter_idx+1] = BitArray(undef, new_dim) # preallocation of new iteration array
-# 			fill!(coarse_g_iterations[iter_idx+1], false)
-# 			coarse_g_iterations[iter_idx+1] = glider_coarse_g(
-# 				coarse_g_iterations[iter_idx],
-# 				coarse_g_iterations[iter_idx+1],
-# 				steps_coarse_g,
-# 				glider_coarse_g_dim,
-# 				cutoff,
-# 			) # computation of new iteration array
-# 		end # if 
-# 	end # for
-# 	return counts_list
-# end # EOF
 
 ##
 
@@ -146,7 +105,7 @@ if rank == root # I am root
 	end # while task_counter_root <= n_tasks
 	# termination 
 	for dst in 1:(nproc-2) # sends a message to all the workers
-		MPI.Isend(-1, dst, dst + 32, comm) # signal to stop
+		MPI.Isend(Int32(-1), dst, dst + 32, comm) # signal to stop
 	end # for dst in 1:(nproc-2)
 elseif rank == merger  # I am merger ('ll merge the dicts)
 
@@ -167,11 +126,15 @@ elseif rank == merger  # I am merger ('ll merge the dicts)
 					dict_decomp = transcode(ZlibDecompressor, dict_buffer)
 					global tot_dicts = MPI.deserialize(dict_decomp)
 					@info "merger: processed $(task_counter_merger) chunks out of $(n_tasks)   $(Dates.format(now(), "HH:MM:SS"))"
+					flush(stdout)
 					task_counter_merger += 1
 				else
 					dict_decomp = transcode(ZlibDecompressor, dict_buffer)
 					[mergewith!(+, tot_dicts[iter], MPI.deserialize(dict_decomp)[iter]) for iter in 1:num_of_iterations] # merges the different dicts from the different iterations together
 					@info "merger: processed $(task_counter_merger) chunks out of $(n_tasks)   $(Dates.format(now(), "HH:MM:SS"))"
+					@info "merger: size first dict $(Base.summarysize(tot_dicts[1])/1024^3)Gb"
+					@info "merger: size all dicts $(Base.summarysize(tot_dicts)/1024^3)Gb"
+					flush(stdout)
 					global task_counter_merger += 1
 				end # if isnothing(tot_data)
 			end # if ismessage
@@ -212,4 +175,4 @@ else
 	end # while true
 
 end # if rank == root
-print("\n proc $(rank) finished ")
+@info "proc $(rank) finished"

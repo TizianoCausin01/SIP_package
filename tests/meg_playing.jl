@@ -8,8 +8,6 @@ using Statistics
 using SIP_package
 using Plots
 ##
-
-##
 path2data = "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/data_repo/SIP_data/MEG_data/sub003_allsens_50Hz_MNN0_badmuscle0_badlowfreq1_badsegint1_badcomp1.mat"
 data = matread(path2data) # loads data as a dict with 4 entries
 ##

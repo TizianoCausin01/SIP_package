@@ -4,7 +4,6 @@ Pkg.activate(".")
 using SIP_package
 using MPI
 using CodecZlib
-using Dates
 ##
 MPI.Init()
 comm = MPI.COMM_WORLD
@@ -31,7 +30,7 @@ end # EOF
 
 function send_large_data(data, dst, tag, comm)
 	size_data = length(data)
-	onsets = collect(0:20000000:size_data)
+	onsets = collect(0:2000000000:size_data)
 	status = MPI.send(UInt32(length(onsets)), dst, tag, comm)
 	append!(onsets, size_data)
 	@info "onsets $(onsets)"
@@ -40,9 +39,9 @@ function send_large_data(data, dst, tag, comm)
 		chunk = data[onsets[ichunk]+1:onsets[ichunk+1]]
 		count += 1
 		status = MPI.send(chunk, dst, tag + count, comm)
-		@info "sent chunk from $(onsets[ichunk]) to $(onsets[ichunk+1])     $(Dates.format(now(), "HH:MM:SS"))"
+		@info "sent chunk from $(onsets[ichunk]) to $(onsets[ichunk+1])"
 	end # for ichunk in 1:length(onsets)-1
-	@info "things sent: $(count)     $(Dates.format(now(), "HH:MM:SS"))"
+	@info "things sent: $(count)"
 end #EOF
 function rec_large_data(src, tag, comm)
 	len_onsets, status = MPI.recv(src, tag, comm)
@@ -58,10 +57,10 @@ function rec_large_data(src, tag, comm)
 		count += 1
 		chunk, status = MPI.recv(src, tag + count, comm)
 		append!(data_rec, chunk)
-		@info "received chunk of size $(length(chunk))     $(Dates.format(now(), "HH:MM:SS"))"
-		@info "size current data_rec: $(length(data_rec))    $(Dates.format(now(), "HH:MM:SS"))"
+		@info "received chunk of size $(length(chunk))"
+		@info "size current data_rec: $(length(data_rec))"
 	end # for ichunk in 1:length_onsets-1
-	@info "things received: $(count)    $(Dates.format(now(), "HH:MM:SS"))"
+	@info "things received: $(count)"
 	return data_rec
 end #EOF
 ##
@@ -69,8 +68,7 @@ if rank == 0
 	# my_dict = generate_rand_dict(10, 200, 4)
 	path2dict = "/leonardo_scratch/fast/Sis25_piasini/tcausin/SIP_results/oregon_counts_cg_3x3x3_win_3x3x3/counts_oregon_iter1.json"
 	my_dict = json2dict(path2dict)
-        @info "size loaded dict: $(Base.summarysize(my_dict)/1024^3) Gb    $(Dates.format(now(), "HH:MM:SS"))"
-        my_dict = MPI.serialize(my_dict)
+	my_dict = MPI.serialize(my_dict)
 	my_dict = transcode(ZlibCompressor, my_dict)
 	@info "length sent: $(size(my_dict)) \n type: $(typeof(my_dict))"
 	send_large_data(my_dict, Int32(1), 1, comm)
@@ -80,5 +78,5 @@ else
 	@info "length received: $(length(dict_rec))"
 	dict_rec = transcode(ZlibDecompressor, dict_rec)
 	dict_rec = MPI.deserialize(dict_rec)
-	@info "keys: $(length(keys(dict_rec)))    $(Dates.format(now(), "HH:MM:SS"))"
+	@info "keys: $(length(keys(dict_rec)))"
 end #if rank==0

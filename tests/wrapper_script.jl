@@ -2,8 +2,12 @@
 using Pkg
 cd("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_package/SIP_dev")
 Pkg.activate(".")
+##
 Pkg.develop(path = "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_package/")
+
 using SIP_package
+
+##
 using Images
 using VideoIO
 using Statistics
@@ -32,7 +36,7 @@ using JSON
 # percentile = 30 # top nth part of the distribution taken into account to compute loc_max	
 
 ##
-function wrapper_sampling(video_path::String, results_path::String, file_name::String, num_of_iterations::Int, glider_coarse_g_dim::Tuple{3}, glider_dim::Tuple{3}, percentile::Int)
+function wrapper_sampling(video_path::String, results_path::String, file_name::String, num_of_iterations::Int, glider_coarse_g_dim::Tuple{Int, Int, Int}, glider_dim::Tuple{Int, Int, Int}, percentile::Int)
 	# video conversion into BitArray
 	bin_vid = SIP_package.video_conversion(video_path) # converts a target yt video into a binarized one
 
@@ -49,7 +53,7 @@ function wrapper_sampling(video_path::String, results_path::String, file_name::S
 	for iter_idx ∈ 1:num_of_iterations
 		@info "running iteration $iter_idx"
 		@time begin
-			if iter_idx > 2
+			if iter_idx > 0
 				# samples the current iteration
 				counts_list[iter_idx] = glider(coarse_g_iterations[iter_idx], glider_dim) # samples the current iteration
 				loc_max_list[iter_idx] = get_loc_max(counts_list[iter_idx], percentile) # computes the local maxima
@@ -92,7 +96,9 @@ glider_dim = (2, 2, 2) # rows, cols, depth
 percentile = 30 # top nth part of the distribution taken into account to compute loc_max	
 results_dir = "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/data_repo/SIP_results"
 ##
-wrapper_sampling(video_path, results_dir, file_name, num_of_iterations, glider_coarse_g_dim, glider_dim, percentile)
+SIP_package.wrapper_sampling(video_path, results_dir, file_name, num_of_iterations, glider_coarse_g_dim, glider_dim, percentile)
 ##
-
+Profile.print()
+##
+pprof()
 

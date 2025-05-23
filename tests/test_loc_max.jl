@@ -1,18 +1,18 @@
 ##
 using Pkg
-cd("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_code/")
-Pkg.activate("SIP)
+cd("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_package/SIP_dev/")
+Pkg.activate(".")
 
 ##
 using JSON
 ##
 
 ##
-Pkg.develop(path = "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_code/SIP_package/")
+Pkg.develop(path = "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_package/")
 using SIP_package
 
 ##
-myDict = JSON.parsefile("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/data_repo/SIP_data/counts_test.json")
+myDict = JSON.parsefile("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/data_repo/SIP_results/counts/counts_test_venice_iter5.json")
 ##
 # Function to parse keys and create a new dictionary
 function convert_to_bitvector_dict(str_dict::Dict{String, Any})
@@ -44,8 +44,8 @@ plot_loc_max(loc_max, (2, 2, 2), 1)
 ##
 edit(plot_loc_max)
 ##
-fn= "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/data_repo/SIP_data/test_venice.mp4"
+fn = "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/data_repo/SIP_data/test_venice.mp4"
 split_vid(fn, outfn, 10)
-outfn= "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/data_repo/SIP_data/test_ven%03d.mp4"
+outfn = "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/data_repo/SIP_data/test_ven%03d.mp4"
 
 

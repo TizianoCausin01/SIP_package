@@ -69,9 +69,9 @@ if rank == 0
 	my_dict = MPI.serialize(my_dict)
 	my_dict = transcode(ZlibCompressor, my_dict)
 	@info "length sent: $(size(my_dict)) \n type: $(typeof(my_dict))"
-	send_large_data(my_dict, Int32(1), 1, comm)
+	send_large_data(my_dict, Int32(1), 1000, comm)
 else
-	dict_rec = rec_large_data(0, 1, comm)
+	dict_rec = rec_large_data(0, 1000, comm)
 	#@info "$(dict_rec)"
 	@info "length received: $(length(dict_rec))"
 	dict_rec = transcode(ZlibDecompressor, dict_rec)
