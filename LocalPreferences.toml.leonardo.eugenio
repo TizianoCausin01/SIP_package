@@ -1,0 +1,13 @@
+[MPIPreferences]
+__clear__ = ["preloads_env_switch"]
+_format = "1.0"
+abi = "OpenMPI"
+binary = "system"
+cclibs = []
+libmpi = "libmpi"
+mpiexec = "mpiexec"
+preloads = []
+
+[HDF5]
+libhdf5 = "/leonardo/prod/spack/5.2/install/0.21/linux-rhel8-icelake/gcc-12.2.0/hdf5-1.14.3-flr43qytzge67qvbmjx4mszcm23s4d3b/lib/libhdf5.so"
+libhdf5_hl = "/leonardo/prod/spack/5.2/install/0.21/linux-rhel8-icelake/gcc-12.2.0/hdf5-1.14.3-flr43qytzge67qvbmjx4mszcm23s4d3b/lib/libhdf5_hl.so"
