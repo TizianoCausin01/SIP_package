@@ -7,6 +7,7 @@ Pkg.activate(".")
 Pkg.develop(path = "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_package/")
 using MPI
 using SIP_package
+
 # vars for parallel
 MPI.Init()
 comm = MPI.COMM_WORLD
@@ -17,6 +18,7 @@ root = 0
 name_vid = "test_venice_long"
 path2original = "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/data_repo/SIP_data/$(name_vid).mp4"
 split_folder = "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/data_repo/SIP_data/$(name_vid)_split"
+split_files = "$(split_folder)/$(name_vid)%03d.mp4"
 # vars for sampling
 num_of_iterations = 5 # counting the 0th iteration
 glider_coarse_g_dim = (3, 3, 3) # rows, cols, depth
@@ -67,8 +69,10 @@ end # EOF
 ## split video
 duration = 39 # in seconds
 split_vid_duration = duration / nproc
-# I have done it beforehand, to be added later in the current script
-
+if rank == root
+	split_vid(path2original, split_files, split_vid_duration)
+end
+MPI.Barrier(comm) # everyone has to wait the video splitting
 ## distribute files
 file_names = readdir(split_folder) # reads the files present in split_folder
 my_files = file_names[rank+1:nproc:length(file_names)] # cyclic distribution (like dealing cards) -> each process has a different rank so it will be assigned different files
@@ -98,6 +102,7 @@ if rank == root # to pass and merge the dicts
 		mergewith(+, [deserialized_dicts[j][i] for j in 1:nproc]...)
 		for i in 1:num_of_iterations
 	] # merging the same levels of different dicts from different processes (double for loop comprehension and splatting)
+
 else
 	MPI.Gatherv!(send_buf, nothing, root, comm) # when rank != root the recv_buf is set to nothing
 end # end if rank == root ot pass and merge the dicts
@@ -111,4 +116,5 @@ MPI.Finalize()
 
 
 ## temp function
+print(rank)
 

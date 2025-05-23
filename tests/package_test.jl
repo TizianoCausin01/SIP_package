@@ -20,15 +20,12 @@ end
 begin
 ## select correct virtual environment
 using Pkg
-cd("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_code/")
-Pkg.activate("SIP")
+cd("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_package/")
+Pkg.activate(".")
 end
 
 # ╔═╡ 485f8408-93b0-4dcc-9514-76f08f2f705a
-begin
-	Pkg.develop(path="/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_code/SIP_package/")
-	using SIP_package
-end
+using SIP_package
 
 # ╔═╡ 68f3d10f-46cf-46ae-b63c-eecc989eaaf4
 begin	
@@ -38,10 +35,10 @@ begin
 	using HDF5
 	using ImageView
 	using PlutoUI
-	using Revise
+	
 end
 
-# ╔═╡ 8005de68-1e0d-47c4-b28b-b4bc6a525cf8
+# ╔═╡ 83ec6c46-f55a-4530-ae98-1d3b920b18b9
 using Plots
 
 # ╔═╡ 5fd55fbc-54a1-482c-9da7-0205508db611
@@ -56,7 +53,7 @@ bin_file = "$bin_dir/$file_name.h5"
 end
 
 # ╔═╡ 7373b4b4-0b69-4945-89b9-bb551fe31641
-bin_vid = SIP_package.video_conversion(file_path); # converts a target yt video into a binarized one
+bin_vid = whole_video_conversion(file_path); # converts a target yt video into a binarized one
 
 # ╔═╡ 52063ab6-d66e-4d9a-ad59-9702a04bd7a5
 size(bin_vid)
@@ -119,6 +116,8 @@ begin
 end
 
 # ╔═╡ b591a3e2-830d-4d71-95f2-090090fe3135
+# ╠═╡ disabled = true
+#=╠═╡
 #just to save it
 begin
 using JSON
@@ -126,6 +125,7 @@ open("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/data_repo/SIP_dat
     JSON.print(file, tot_counts[1])
 end
 end
+  ╠═╡ =#
 
 # ╔═╡ b9b75657-f66c-430d-b893-15108e0cf562
 md"### iteration slider"
@@ -215,7 +215,7 @@ typeof(plot_list)
 # ╠═7373b4b4-0b69-4945-89b9-bb551fe31641
 # ╠═52063ab6-d66e-4d9a-ad59-9702a04bd7a5
 # ╠═39e3ab69-b2d3-4466-8e74-cb5882f4253a
-# ╟─98e62907-6178-4746-a7c0-053979777671
+# ╠═98e62907-6178-4746-a7c0-053979777671
 # ╟─c3b7dc8f-4ff2-4c69-a4a1-d8b5e7b8cf98
 # ╠═d0f0b579-4455-4dc9-a305-0c32783f17d7
 # ╠═4f6a1a43-7ceb-4aad-933a-d69fbdcb3b90
@@ -238,7 +238,7 @@ typeof(plot_list)
 # ╠═69831433-9a08-4174-93b8-44c17bc1e394
 # ╠═15533d41-7a8c-43e5-920a-f1adc07c1d6a
 # ╠═deae04e2-ffd9-4973-a9ff-c4e026ec7d62
-# ╠═8005de68-1e0d-47c4-b28b-b4bc6a525cf8
+# ╠═83ec6c46-f55a-4530-ae98-1d3b920b18b9
 # ╠═71e8c658-5880-4c24-a005-1e77ef00f5bd
 # ╠═9bc31d42-40c8-4bc5-8dd1-6cb5b3d30387
 # ╠═e86331d9-f5c1-4e12-be81-20b3c0494f88

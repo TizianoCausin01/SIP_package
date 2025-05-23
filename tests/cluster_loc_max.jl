@@ -1,16 +1,13 @@
-# to run this: 
-# mpiexec -np 6 julia /Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_package/tests/loc_max_parallel.jl
-##
+
 using Pkg
 cd("/leonardo/home/userexternal/tcausin0/virtual_envs/SIP_dev")
 Pkg.activate(".")
-
+Pkg.develop(path = "/leonardo/home/userexternal/tcausin0/SIP_package/")
 ##
 using MPI
 using JSON
 using SIP_package
 using Dates
-using CodecZlib
 ##
 # vars for parallel
 MPI.Init()
@@ -19,6 +16,7 @@ rank = MPI.Comm_rank(comm) # to establish a unique ID for each process
 nproc = MPI.Comm_size(comm) # to establish the total number of processes used
 root = 0
 merger = nproc - 1
+
 if rank == root
 	@info "--------------------- \n \n \n \n \n STARTING LOCAL MAXIMA COMPUTATION \n $(Dates.format(now(), "HH:MM:SS")) \n \n \n \n \n ---------------------"
 end #if rank==root
@@ -32,22 +30,19 @@ loc_max_path = "$(results_path)/loc_max_$(file_name)"
 
 for iter_idx in 1:num_of_iterations
 	dict_path = "$(results_path)/counts_$(file_name)_iter$(iter_idx).json"
-	@info "rank $rank before loading dict"
 	myDict = json2dict(dict_path)
-	@info "rank $rank dict loaded"
-	if rank == root
-		@info "iter $(iter_idx) has a dict with $(length(myDict)) keys"
-	end
-	percentile = 10
+	percentile = 30
 	top_counts = get_top_windows(myDict, percentile)
 	tot_counts = length(top_counts)
-	jump = cld(tot_counts, nproc - 1) # performs a ceiling division to equally divide the number of windows among the processes, if we overshoot (because the ceiling approximation surpasses the total number of windows), the processor just skips the for loop inside parallel_get_loc_max
+	jump = Int32(cld(tot_counts, nproc - 1)) # performs a ceiling division to equally divide the number of windows among the processes, if we overshoot (because the ceiling approximation surpasses the total number of windows), the processor just skips the for loop inside parallel_get_loc_max
 	##
 	if rank == root # I am root
 		global current_start = Int32(0) # is the number of iterations we will drop before our target, that's why we start from 0 
 		for dst in 1:(nproc-1) # loops over the processors to deal the task
-			MPI.Isend(Int32(current_start), dst, dst + 32, comm)
+			MPI.Isend(current_start, dst, dst + 32, comm)
 			global current_start += jump
+                        @info "current_start $(current_start)"
+@info "$(typeof(current_start))"
 		end # for i_deal in 1:(nproc-1)
 
 		global counter_done_procs = 0
@@ -59,15 +54,16 @@ for iter_idx in 1:num_of_iterations
 				if ismessage_len & ismessage
 					length_mex = Vector{Int32}(undef, 1) # preallocates recv buffer
 					req_len = MPI.Irecv!(length_mex, src, src + 64, comm)
-					MPI.Wait(req_len)
+					@info "length_mex $(length_mex)"
+                                        @info "length_mex[1] $(length_mex[1])"
+                                        @info "$(typeof(length_mex))"
+                                        MPI.Wait(req_len)
 					array_buffer = Vector{UInt8}(undef, length_mex[1])
-					req_mex = MPI.Irecv!(array_buffer, src, src + 32, comm)
-					MPI.Wait(req_mex)
+                                        MPI.Irecv!(array_buffer, src, src + 32, comm)
 					if length_mex[1] != 0 # if the process didn't find any loc_max i.e. anything to append
-						max_list_ser = transcode(ZlibDecompressor, array_buffer)
-						max_list = MPI.deserialize(max_list_ser)
-						append!(tot_list, max_list)
-						@info "received list from process $(src)"
+						max_list = MPI.deserialize(array_buffer)
+						@info "max_list $max_list"
+                                                append!(tot_list, max_list)
 					end # length_mex[1] != 0
 					global counter_done_procs += 1
 				end # if ismessage_len & ismessage
@@ -93,12 +89,11 @@ for iter_idx in 1:num_of_iterations
 				start = start[1] # takes just the first element of the vector (it's a vector because it's a receive buffer)
 				loc_max = parallel_get_loc_max(myDict, top_counts, start, jump)
 				mex = MPI.serialize(loc_max)
-				mex_comp = transcode(ZlibCompressor, mex)
-				len_mex = Int32(length(mex_comp))
+				len_mex = Int32(length(mex))
+                                @info "len_mex sent: $(len_mex)"
 				len_req = MPI.Isend(len_mex, root, rank + 64, comm)
-				@info "rank $(rank) sends list of length $(len_mex)"
 				MPI.Wait(len_req)
-				MPI.Isend(mex_comp, root, rank + 32, comm)
+				MPI.Isend(mex, root, rank + 32, comm)
 				global stop = 1 # to break the while loop
 			end # if ismessage
 		end # while stop != 1

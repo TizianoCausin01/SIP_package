@@ -17,14 +17,6 @@ comm = MPI.COMM_WORLD
 rank = MPI.Comm_rank(comm) # to establish a unique ID for each process
 nproc = MPI.Comm_size(comm) # to establish the total number of processes used
 root = 0
-
-
-# vars for parallel
-MPI.Init()
-comm = MPI.COMM_WORLD
-rank = MPI.Comm_rank(comm) # to establish a unique ID for each process
-nproc = MPI.Comm_size(comm) # to establish the total number of processes used
-root = 0
 master_merger = 1
 n_mergers = parse(Int, ARGS[8])
 mergers = 2:(1+n_mergers)
@@ -214,7 +206,7 @@ elseif in(rank, mergers) # I am merger
 					MPI.Isend(Int32(1), master_merger, rank + 100, comm)
 					dict_buffer = nothing
 					@info "merger $(rank): free memory $(Sys.free_memory()/1024^3), size dict $((Base.summarysize(tot_dicts))/1024^3), max size by now: $(Sys.maxrss()/1024^3)   $(Dates.format(now(), "HH:MM:SS"))"
-                                        GC.gc()
+					GC.gc()
 					@info "merger $(rank): free memory $(Sys.free_memory()/1024^3), size dict $((Base.summarysize(tot_dicts))/1024^3) after GC, max size by now: $(Sys.maxrss()/1024^3)   $(Dates.format(now(), "HH:MM:SS"))"
 
 					flush(stdout)

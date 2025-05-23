@@ -2,11 +2,13 @@ using Pkg
 cd("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_package/SIP_dev")
 Pkg.activate(".")
 using VideoIO
+using SIP_package
 ##
 path2vid = "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/data_repo/SIP_data/short.mp4"
 reader = VideoIO.openvideo(path2vid)
 ##
-typeof(get_frame_count(reader))
+frame, w, h, d = SIP_package.get_dimensions(reader)
+
 
 ##
 function get_frame_count(reader)

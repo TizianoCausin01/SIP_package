@@ -9,6 +9,7 @@ using MPI
 using JSON
 using Dates
 using CodecZlib
+using Profile
 const Int = Int32
 ##
 # vars for parallel
@@ -82,7 +83,7 @@ function wrapper_sampling_parallel(video_path, num_of_iterations, glider_coarse_
 			steps_coarse_g = compute_steps_glider(glider_coarse_g_dim, old_dim) # precomputes the steps of the coarse-graining glider
 			new_vid = BitArray(undef, new_dim) # preallocation of new iteration array
 			fill!(new_vid, false)
-			new_vid = glider_coarse_g(
+			new_vid = @profile glider_coarse_g(
 				old_vid,
 				new_vid,
 				steps_coarse_g,

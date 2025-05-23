@@ -100,7 +100,7 @@ elseif rank == merger  # I am merger ('ll merge the arrays)
 			end # if ismessage
 		end # for src in 1:(nproc-2)
 	end # while task_counter_merger <= n_chunks
-	model = MultivariateStats.fit(ICA, tot_arrays, n_comps, maxiter = 100000) # use dot notation because otherwise it's in conflict with the original fit function 
+	model = MultivariateStats.fit(ICA, tot_arrays, n_comps, maxiter = 100000, do_whiten = false) # use dot notation because otherwise it's in conflict with the original fit function 
 	comps = transform(model, tot_arrays)
 	reader2 = VideoIO.openvideo(joinpath(split_folder, files_names[1]))
 	frame1, height1, width1, frame_num = get_dimensions(reader2) # reads one frame to get the dimensions of it resized

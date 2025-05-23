@@ -65,7 +65,7 @@ if rank == root # I am root
 	end # while task_counter_root <= n_tasks
 	# termination 
 	for dst in workers # sends a message to all the workers
-		MPI.Isend(-1, dst, dst + 32, comm) # signal to stop
+		MPI.Isend(Int32(-1), dst, dst + 32, comm) # signal to stop
 	end # for dst in 1:(nproc-2)
 elseif rank == master_merger # I am master merger
 	@info "proc $(rank): I am master merger"
@@ -149,7 +149,6 @@ elseif in(rank, mergers) # I am merger
 					flush(stdout)
 					global task_counter_merger += 1
 					@info "merger $(rank) : $task_counter_merger"
-					sleep(1)
 					MPI.Isend(Int32(1), master_merger, rank + 100, comm)
 				end # if isnothing(tot_data)
 			end # if src_worker == -1
