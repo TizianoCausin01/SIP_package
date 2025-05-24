@@ -411,6 +411,9 @@ Outputs :
 function glider(bin_vid::BitArray{3}, glider_dim)::Dict{Int64, UInt64}
 	counts = Dict{Int64, UInt64}()
 	vid_dim = size(bin_vid)
+	win_el = glider_dim[1] * glider_dim[2] * glider_dim[3]
+	progression = reverse(0:win_el-1)
+	pow_of_2 = 2 .^ progression
 	for i_time ∈ 1:vid_dim[3]-glider_dim[3] # step of sampling glider = 1
 		idx_time = i_time:i_time+glider_dim[3]-1
 		for i_cols ∈ 1:vid_dim[2]-glider_dim[2]
@@ -418,7 +421,7 @@ function glider(bin_vid::BitArray{3}, glider_dim)::Dict{Int64, UInt64}
 			for i_rows ∈ 1:vid_dim[1]-glider_dim[1]
 				idx_rows = i_rows:i_rows+glider_dim[1]-1
 				win_slice = bin_vid[idx_rows, idx_cols, idx_time]
-				int_win = bin2int(win_slice)
+				int_win = bin2int(win_slice, pow_of_2)
 				counts[int_win] = get!(counts, int_win, 0) + 1 # updates the count
 			end # cols
 		end # rows
@@ -444,10 +447,7 @@ end #EOF
 bin2int
 Converts BitArray (the window) onto Int64
 """
-function bin2int(win::BitArray{3})::Int64
-	win_el = length(win)
-	progression = reverse(0:win_el-1)
-	pow_of_2 = 2 .^ progression
+function bin2int(win::BitArray{3}, pow_of_2)::Int64
 	win_vec = vec(win)
 	int_repr = Int64(dot(win_vec, pow_of_2))
 	return int_repr
