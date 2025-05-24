@@ -499,13 +499,13 @@ output:
 
 Dict{BitVector, Int}
 """
-function get_loc_max(myDict, percentile)
-	loc_max = Vector{BitVector}(undef, 0) # initializes as a vector of BitVectors
+function get_loc_max(myDict, percentile, length_win)
+	loc_max = Vector{Int64}(undef, 0) # initializes as a vector of BitVectors
 	sorted_counts = sort(collect(myDict), by = x -> x[2], rev = true) # sorts the dictionary of counts according to the values and converts it into a Vector{Pair{}}
 	top_nth = Int(round(2^length(sorted_counts[1].first) * percentile / 100)) # computes the top nth elements
 	for element in Iterators.take(sorted_counts, top_nth) # loops through the top nth-elements
 		win = element.first # extracts the key
-		max = is_max(myDict, win) # inspects if it's a max
+		max = is_max(myDict, win, length_win) # inspects if it's a max
 		if ~(max === nothing) # if max exists, updates loc_max
 			push!(loc_max, max)
 		end # if max exists
@@ -526,10 +526,10 @@ Output:
 - if it's local maximum : win 
 - if it's not : nothing
 """
-function is_max(myDict, win)
+function is_max(myDict, win, length_win)
 	win_freq = get(myDict, win, -1) # if the key doesn't exit, assign -1
 	for position ∈ 1:length(win) # changes one element at the time
-		flipped_win = flip_element(win, position) # flips the window element in "position" 
+		flipped_win = flip_element(win, position, length_win) # flips the window element in "position" 
 		if get(myDict, flipped_win, 0) > win_freq # new win might have been not present, that's why we use get 
 			return nothing # don't include win in local maxima if it breaks the loop (counter<length(win))
 		end # if get(myDict, win, 0) > win_freq
@@ -550,9 +550,9 @@ Inputs :
 output :
 - win -> the modified window
 """
-function flip_element(win::BitVector, position::Int)
-	flipped_win = copy(win) # creates a copy to not mutate the win
-	flipped_win[position] = ~flipped_win[position]  # flips the value by negating it
+function flip_element(win::BitVector, position::Int, length_win::Int)
+	pow_of_2 = 2^(length_win - position)
+	flipped_win = xor(win, pow_of_2)
 	return flipped_win
 end # EOF
 
@@ -721,7 +721,7 @@ function is_max_ham_recursive(myDict, win_freq, flipped_win1, positions_done, di
 end #EOF
 
 function is_max_ham_init(myDict, win, dist_required)
-	win_freq = get(myDict, win, -1) # if the key doesn't exit, assign -1
+	win_freq = get(myDict, win, -1) # if the key doesn't exist, assign -1
 	for position ∈ 1:length(win) # changes one element at the time
 		flipped_win = flip_element(win, position) # flips the window element in "position" 
 		if get(myDict, flipped_win, 0) > win_freq # new win might have been not present, that's why we use get 
@@ -975,6 +975,31 @@ function json2dict(path2dict::String)
 		end
 	end
 	return bitvector_dict
+end
+
+"""
+json2intdict
+Loads and converts the saved dictionary from .json format.
+
+INPUT:
+- path2dict::String -> the path to the dictionary.json
+
+OUTPUT:
+- int_dict::Dict{Int64, UInt64} -> the dictionary in the original format
+"""
+function json2intdict(path2dict::String)::Dict{Int64, UInt64}
+	str_dict = JSON.parsefile(path2dict)  # Parses into Dict{String, Any}
+	int_dict = Dict{Int64, UInt64}()      # Preallocate target dict
+	for (key, value) in str_dict
+		try
+			int_key = parse(Int64, key)
+			int_value = UInt64(value)
+			int_dict[int_key] = int_value
+		catch e
+			println("Skipping entry ($key => $value): ", e)
+		end
+	end
+	return int_dict
 end
 
 
