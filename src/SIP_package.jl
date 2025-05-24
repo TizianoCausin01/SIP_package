@@ -418,7 +418,8 @@ function glider(bin_vid::BitArray{3}, glider_dim)::Dict{Int64, UInt64}
 				idx_rows = i_rows:i_rows+glider_dim[1]-1
 				win_slice = bin_vid[idx_rows, idx_cols, idx_time]
 				win_str = bitstring(win_slice) # creates a bitstring from the correspoding slide
-				int_win = parse(Int64, win_str, base = 2) # parses the bitstring into an Int
+                                win_str = filter(x -> !isspace(x), win_str)
+                                int_win = parse(Int64, win_str, base = 2) # parses the bitstring into an Int
 				counts[int_win] = get!(counts, int_win, 0) + 1 # updates the count
 			end # cols
 		end # rows

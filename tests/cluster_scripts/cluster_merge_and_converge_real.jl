@@ -7,6 +7,9 @@ using Dates
 using CodecZlib
 const Int = Int32
 ##
+using Pkg
+cd("/leonardo/home/userexternal/tcausin0/virtual_envs/SIP_dev")
+Pkg.activate(".")
 # vars for parallel
 MPI.Init()
 comm = MPI.COMM_WORLD
@@ -19,9 +22,9 @@ mergers = 2:(1+n_mergers)
 workers = (1+mergers[end]):(nproc-1)
 name_vid = ARGS[1]
 split_folder = "/leonardo_scratch/fast/Sis25_piasini/tcausin/SIP_data/$(name_vid)_split"
-results_path = "/leonardo_scratch/fast/Sis25_piasini/epiasini/tiziano_test_results"#"/leonardo_scratch/fast/Sis25_piasini/tcausin/SIP_results"#
+results_path = "/leonardo_scratch/fast/Sis25_piasini/tcausin/SIP_results"
 split_files = "$(split_folder)/$(name_vid)%03d.mp4"
-files_names = readdir(split_folder)#[1:53]
+files_names = readdir(split_folder)
 n_tasks = length(files_names) # also the length of it
 tasks = 1:n_tasks
 # vars for sampling
@@ -69,7 +72,7 @@ function wrapper_sampling_parallel(video_path, num_of_iterations, glider_coarse_
 	bin_vid = whole_video_conversion(video_path) # converts a target yt video into a binarized one
 	# preallocation of dictionaries
 	@info "$(Dates.format(now(), "HH:MM:SS")) worker $(rank) before sampling: free memory $(Sys.free_memory()/1024^3) max size by now: $(Sys.maxrss()/1024^3)"
-	counts_list = Vector{Dict{SBitSet{B}, UInt64}}(undef, num_of_iterations) # list of count_dicts of every iteration
+	counts_list = Vector{Dict{Int64, UInt64}}(undef, num_of_iterations) # list of count_dicts of every iteration
 	coarse_g_iterations = Vector{BitArray}(undef, num_of_iterations) # list of all the videos at different levels of coarse graining
 	# further variables for coarse-graining
 	volume = glider_coarse_g_dim[1] * glider_coarse_g_dim[2] * glider_coarse_g_dim[3] #computes the volume of the solid

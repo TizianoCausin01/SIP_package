@@ -20,7 +20,7 @@ win1=3
 win2=3
 win3=3
 mergers_num=7
-module load openmpi hdf5
+module load openmpi # hdf5
 export JULIA_NUM_THREADS=1
 
 heap_size_hint=10G
