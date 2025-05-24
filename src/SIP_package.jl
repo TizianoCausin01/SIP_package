@@ -24,6 +24,7 @@ export wrapper_sampling,
 	entropy_T,
 	numerical_heat_capacity_T,
 	json2dict,
+	json2intdict,
 	jsd,
 	tot_sh_entropy,
 	meg_sampling,
@@ -550,7 +551,7 @@ Inputs :
 output :
 - win -> the modified window
 """
-function flip_element(win::BitVector, position::Int, length_win::Int)
+function flip_element(win, position, length_win)
 	pow_of_2 = 2^(length_win - position)
 	flipped_win = xor(win, pow_of_2)
 	return flipped_win
@@ -630,11 +631,11 @@ INPUT:
 OUTPUT:
 - loc_max::Vector{BitVector} -> an array with all the local maxima in that portion of myDict
 """
-function parallel_get_loc_max(myDict::Dict{BitVector, Int}, top_nth_sorted_counts::Vector{Pair{BitVector, Int64}}, start::Integer, iterations::Integer)::Vector{BitVector}
-	loc_max = Vector{BitVector}(undef, 0) # initializes as a vector of BitVectors
+function parallel_get_loc_max(myDict, top_nth_sorted_counts, start, iterations, length_win)
+	loc_max = Vector{Int64}(undef, 0) # initializes as a vector of BitVectors
 	for element in Iterators.take(Iterators.drop(top_nth_sorted_counts, start), iterations) # loops through top_nth_sorted_counts from start to start + iterations, if the array finishes before, it ends before
 		win = element.first # extracts the key
-		max = is_max(myDict, win) # inspects if it's a max
+		max = is_max(myDict, win, length_win) # inspects if it's a max
 		if ~(max === nothing) # if max exists, updates loc_max
 			push!(loc_max, max)
 		end # if max exists
@@ -672,7 +673,7 @@ INPUT:
 OUTPUT:
 - top_counts::Vector{Pair{BitVector, Int64}} -> the top percentile% counts sorted in decreasing order
 """
-function get_top_windows(myDict::Dict{BitVector, Int}, percentile::Int)::Vector{Pair{BitVector, Int64}}
+function get_top_windows(myDict, percentile)
 	sorted_counts = sort(collect(myDict), by = x -> x[2], rev = true) # sorts the dictionary of counts according to the values and converts it into a Vector{Pair{}}
 	top_nth = Int(round(length(sorted_counts) * percentile / 100)) # computes the top nth elements
 	top_counts = sorted_counts[1:top_nth]
