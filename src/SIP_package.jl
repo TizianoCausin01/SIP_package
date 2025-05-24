@@ -417,9 +417,7 @@ function glider(bin_vid::BitArray{3}, glider_dim)::Dict{Int64, UInt64}
 			for i_rows ∈ 1:vid_dim[1]-glider_dim[1]
 				idx_rows = i_rows:i_rows+glider_dim[1]-1
 				win_slice = bin_vid[idx_rows, idx_cols, idx_time]
-				win_str = bitstring(win_slice) # creates a bitstring from the correspoding slide
-                                win_str = filter(x -> !isspace(x), win_str)
-                                int_win = parse(Int64, win_str, base = 2) # parses the bitstring into an Int
+				int_win = bin2int(win_slice)
 				counts[int_win] = get!(counts, int_win, 0) + 1 # updates the count
 			end # cols
 		end # rows
@@ -441,6 +439,18 @@ function update_count(counts_dict, window)
 	return counts_dict
 end #EOF
 
+"""
+bin2int
+Converts BitArray (the window) onto Int64
+"""
+function bin2int(win::BitArray{3})::Int64
+	win_el = length(win)
+	progression = reverse(0:win_el-1)
+	pow_of_2 = 2 .^ progression
+	win_vec = vec(win)
+	int_repr = Int64(dot(win_vec, pow_of_2))
+	return int_repr
+end # EOF
 
 """
 get_nth_window
