@@ -36,10 +36,7 @@ export wrapper_sampling,
 	get_fps,
 	centering_whitening,
 	mergers_convergence,
-	merge_vec_dicts,
-	B,
-	SBitSet,
-	convert
+	merge_vec_dicts
 
 # =========================
 # IMPORTED PACKAGES
@@ -55,10 +52,10 @@ using Images,
 	CodecZlib,
 	Dates
 
-include("./SBitSet.jl")
+#include("./SBitSet.jl")
 
 
-const B = 1 # number of 64-bits chunks for SBitSet
+#const B = 1 # number of 64-bits chunks for SBitSet
 # =========================
 # WRAPPER ALL
 # =========================
@@ -410,7 +407,7 @@ Outputs :
 - counts -> it's a dict with the UInt64 corresponding to the bit windows as keys and UInt64 as values. 
 			It stores the counts of windows configurations
 """
-function glider(bin_vid::BitArray{3}, glider_dim::Tuple{Int, Int, Int})::Dict{Int64, UInt64}
+function glider(bin_vid::BitArray{3}, glider_dim)::Dict{Int64, UInt64}
 	counts = Dict{Int64, UInt64}()
 	vid_dim = size(bin_vid)
 	for i_time ∈ 1:vid_dim[3]-glider_dim[3] # step of sampling glider = 1
@@ -1385,8 +1382,10 @@ OUTPUT:
 function get_steps_convergence(vec)
 	levels = [collect(vec)] # in case arr was a UnitRange{Int64}
 	global count = 0 # count of the level
+	@info "levels: $(levels[end])"
 	while length(levels[end]) > 1 # it ends when length(nxt_lvl)==1
 		global count += 1
+		@info "count $count"
 		current_lvl = levels[end]
 		idx = 1:2:length(current_lvl) # takes all the odds indeces in current lvl
 		nxt_lvl = current_lvl[idx]
