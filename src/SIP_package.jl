@@ -53,7 +53,7 @@ using Images,
 	LinearAlgebra,
 	MPI,
 	CodecZlib,
-        Dates
+	Dates
 
 include("./SBitSet.jl")
 
@@ -407,12 +407,11 @@ Inputs :
 - glider_dim -> a tuple with the three dimensions of the glider
 
 Outputs :
-- counts -> it's a dict with BitVector as keys and Int as values. 
+- counts -> it's a dict with the UInt64 corresponding to the bit windows as keys and UInt64 as values. 
 			It stores the counts of windows configurations
 """
-function glider(bin_vid, glider_dim)
-	counts = Dict{SBitSet{B}, Int}()
-	#counts = Dict{BitVector, Int}()
+function glider(bin_vid::BitArray{3}, glider_dim::Tuple{Int, Int, Int})::Dict{Int64, UInt64}
+	counts = Dict{Int64, UInt64}()
 	vid_dim = size(bin_vid)
 	for i_time ∈ 1:vid_dim[3]-glider_dim[3] # step of sampling glider = 1
 		idx_time = i_time:i_time+glider_dim[3]-1
@@ -420,11 +419,10 @@ function glider(bin_vid, glider_dim)
 			idx_cols = i_cols:i_cols+glider_dim[2]-1
 			for i_rows ∈ 1:vid_dim[1]-glider_dim[1]
 				idx_rows = i_rows:i_rows+glider_dim[1]-1
-				#window = view(bin_vid, idx_rows, idx_cols, idx_time) # index in video, gets the current window and immediately vectorizes it. 
-				#vec_window = vec(window)
-				vec_window = convert(SBitSet{B}, vec(bin_vid[idx_rows, idx_cols, idx_time]))
-				#vec_window = vec(bin_vid[idx_rows, idx_cols, idx_time])
-				counts[vec_window] = get!(counts, vec_window, 0) + 1
+				win_slice = bin_vid[idx_rows, idx_cols, idx_time]
+				win_str = bitstring(win_slice) # creates a bitstring from the correspoding slide
+				int_win = parse(Int64, win_str, base = 2) # parses the bitstring into an Int
+				counts[int_win] = get!(counts, int_win, 0) + 1 # updates the count
 			end # cols
 		end # rows
 	end # time
@@ -1328,7 +1326,7 @@ function mergers_convergence(rank, mergers_arr, my_dict, num_of_iterations, resu
 	if rank == mergers_arr[1]
 		@info "$(Dates.format(now(), "HH:MM:SS")) levels: $(levels)"
 	end # if rank==0
-        new_dict_buffer = Vector{UInt8}(undef, 1)
+	new_dict_buffer = Vector{UInt8}(undef, 1)
 	for lev in 1:(length(levels)-1) # stops before the last el in levels
 		if in(rank, levels[lev]) # if the process is within the current levels iteration (otherwise it has already sent its dict)
 			if in(rank, levels[lev+1]) # in case it is a receiver (odd-indexed, it will be present also in the nxt step)
@@ -1336,10 +1334,10 @@ function mergers_convergence(rank, mergers_arr, my_dict, num_of_iterations, resu
 					idx_src = findfirst(rank .== levels[lev]) + 1 # computes the index of the source process (one idx up the idx of the process)
 					# new_dict, status = MPI.recv(levels[lev][idx_src], lev, comm) # receives the new dict
 					#new_dict = rec_large_data(levels[lev][idx_src], lev, comm)
-                                        new_dict_length = MPI.Recv(Int64, comm; source=levels[lev][idx_src], tag=lev)
-				        # we recycle the memory allotted to dict_buffer from one iteration to the next
-				        resize!(new_dict_buffer, new_dict_length)
-                                        MPI.Recv!(new_dict_buffer, comm; source=levels[lev][idx_src], tag=lev)
+					new_dict_length = MPI.Recv(Int64, comm; source = levels[lev][idx_src], tag = lev)
+					# we recycle the memory allotted to dict_buffer from one iteration to the next
+					resize!(new_dict_buffer, new_dict_length)
+					MPI.Recv!(new_dict_buffer, comm; source = levels[lev][idx_src], tag = lev)
 					#new_dict = transcode(ZlibDecompressor, new_dict_buffer)
 					new_dict = MPI.deserialize(new_dict_buffer)
 					merge_vec_dicts(my_dict, new_dict, num_of_iterations)
@@ -1353,8 +1351,8 @@ function mergers_convergence(rank, mergers_arr, my_dict, num_of_iterations, resu
 				#my_dict = transcode(ZlibCompressor, my_dict)
 				# MPI.send(my_dict, levels[lev][idx_dst], lev, comm) # sends its dict
 				#send_large_data(my_dict, levels[lev][idx_dst], lev, comm)
-                                MPI.Send(UInt64(length(my_dict)), comm; dest=levels[lev][idx_dst], tag=lev)
-                                MPI.Send(my_dict, comm; dest=levels[lev][idx_dst], tag=lev)
+				MPI.Send(UInt64(length(my_dict)), comm; dest = levels[lev][idx_dst], tag = lev)
+				MPI.Send(my_dict, comm; dest = levels[lev][idx_dst], tag = lev)
 				my_dict = nothing
 				#GC.gc()
 				@info "$(Dates.format(now(), "HH:MM:SS")) proc $(rank) after converging: free memory $(Sys.free_memory()/1024^3)"
