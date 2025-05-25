@@ -7,18 +7,19 @@
 #SBATCH --mem=480G
 #SBATCH --account=Sis25_piasini       # account name
 #SBATCH --partition=boost_usr_prod # partition name
+#SBATCH --job-name=oregon_cg_3x3x3_win_4x4x2
 #SBATCH --output=/leonardo/home/userexternal/tcausin0/output_jobs/%x.%j.out   # file name will be *job_name*.*job_id*
 
-cd /leonardo/home/userexternal/epiasini/sissa/tiziano/SIP_package
-fn=${1}
-cg1=${2}
-cg2=${3}
-cg3=${4}
-win1=${5}
-win2=${6}
-win3=${7}
-mergers_num=${8}
-module load openmpi # hdf5
+cd /leonardo/home/userexternal/tcausin0/SIP_package
+fn=oregon
+cg1=3
+cg2=3
+cg3=3
+win1=4
+win2=4
+win3=2
+mergers_num=8
+module load openmpi hdf5
 export JULIA_NUM_THREADS=1
 
 heap_size_hint=10G
