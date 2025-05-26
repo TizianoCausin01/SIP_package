@@ -29,7 +29,7 @@ file_name = ARGS[1]
 glider_coarse_g_dim = Tuple(parse(Int, ARGS[i]) for i in 2:4)
 glider_dim = Tuple(parse(Int, ARGS[i]) for i in 5:7)
 length_win = glider_dim[1] * glider_dim[2] * glider_dim[3]
-results_path = "/leonardo_scratch/fast/Sis25_piasini/tcausin/SIP_results/$(file_name)_counts_cg_$(glider_coarse_g_dim[1])x$(glider_coarse_g_dim[2])x$(glider_coarse_g_dim[3])_win_$(glider_dim[1])x$(glider_dim[2])x$(glider_dim[3])"
+results_path = "/leonardo_work/Sis25_piasini/tcausin/SIP_results/$(file_name)_counts_cg_$(glider_coarse_g_dim[1])x$(glider_coarse_g_dim[2])x$(glider_coarse_g_dim[3])_win_$(glider_dim[1])x$(glider_dim[2])x$(glider_dim[3])"
 # results_path = "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/data_repo/SIP_results/$(file_name)_counts_cg_$(glider_coarse_g_dim[1])x$(glider_coarse_g_dim[2])x$(glider_coarse_g_dim[3])_win_$(glider_dim[1])x$(glider_dim[2])x$(glider_dim[3])"
 loc_max_path = "$(results_path)/loc_max_$(file_name)"
 
