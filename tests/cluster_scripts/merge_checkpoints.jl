@@ -19,12 +19,13 @@ win_dim = Tuple(parse(Int, ARGS[i]) for i in 5:7)
 results_folder = "/leonardo_work/Sis25_piasini/tcausin/SIP_results/$(fn)_counts_cg_$(cg_dim[1])x$(cg_dim[2])x$(cg_dim[3])_win_$(win_dim[1])x$(win_dim[2])x$(win_dim[3])"
 num_of_iterations = 5
 old_rank = rank + 2
-mergers_arr = 0:nproc
+mergers_arr = 0:nproc-1
 dict_vec = Vector{Dict{Int64, UInt64}}([])
 for iter_idx in 1:num_of_iterations
 	dict_path = "$(results_folder)/counts_$(fn)_iter$(iter_idx)_rank$(old_rank).json"
 	d = json2intdict(dict_path)
 	push!(dict_vec, d)
+@info "$(Dates.format(now(), "HH:MM:SS")) rank $(rank) : processed iter $(iter_idx)"
 end # for i in 1:num_of_iterations
 
 mergers_convergence(rank, mergers_arr, dict_vec, num_of_iterations, results_folder, fn, comm)
