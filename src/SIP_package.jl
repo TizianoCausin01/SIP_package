@@ -529,12 +529,18 @@ Output:
 """
 function is_max(myDict, win, length_win)
 	win_freq = get(myDict, win, -1) # if the key doesn't exit, assign -1
-	for position ∈ 1:length(win) # changes one element at the time
-		flipped_win = flip_element(win, position, length_win) # flips the window element in "position" 
+	#@info "win: $win , win freq : $(get(myDict, win, 0)), $(reshape(BitVector(c=='1' for c in bitstring(win)[end-27+1:end]), (3,3,3)))"
+	# @info "win: $win , win freq: $win_freq"
+	for position ∈ 1:length_win # changes one element at the time
+		flipped_win = flip_element(win, position, length_win) # flips the window element in "position"
+		#@info "flipped_win: $flipped_win , win freq : $(get(myDict, flipped_win, 0)) $(reshape(BitVector(c=='1' for c in bitstring(flipped_win)[end-27+1:end]), (3,3,3)))"
 		if get(myDict, flipped_win, 0) > win_freq # new win might have been not present, that's why we use get 
+			#@info "returning nothing"
 			return nothing # don't include win in local maxima if it breaks the loop (counter<length(win))
+
 		end # if get(myDict, win, 0) > win_freq
-	end # for position 
+	end # for position
+	@info "returning something"
 	return win # only if it is a local max
 end # EOF
 
@@ -1356,7 +1362,7 @@ none
 """
 function mergers_convergence(rank, mergers_arr, my_dict, num_of_iterations, results_folder, name_vid, comm)
 	@info "not using the length"
-        levels = get_steps_convergence(mergers_arr)
+	levels = get_steps_convergence(mergers_arr)
 	@info "$(Dates.format(now(), "HH:MM:SS")) proc $(rank) before converging: free memory $(Sys.free_memory()/1024^3)"
 	if rank == mergers_arr[1]
 		@info "$(Dates.format(now(), "HH:MM:SS")) levels: $(levels)"
@@ -1374,7 +1380,7 @@ function mergers_convergence(rank, mergers_arr, my_dict, num_of_iterations, resu
 					#resize!(new_dict_buffer, new_dict_length)
 					#MPI.Recv!(new_dict_buffer, comm; source = levels[lev][idx_src], tag = lev)	
 					#new_dict_ser = MPI.Recv(UInt32, comm; source = levels[lev][idx_src], tag = lev)
-	                                #new_dict = transcode(ZlibDecompressor, new_dict_buffer)
+					#new_dict = transcode(ZlibDecompressor, new_dict_buffer)
 					#new_dict = MPI.deserialize(new_dict_buffer)					
 					#rec_large_data(levels[lev][idx_src],lev , comm)
 					new_dict = MPI.deserialize(new_dict)
@@ -1392,7 +1398,7 @@ function mergers_convergence(rank, mergers_arr, my_dict, num_of_iterations, resu
 				#MPI.Send(UInt32(length(my_dict)), comm; dest = levels[lev][idx_dst], tag = lev)
 				#MPI.Send(my_dict, comm; dest = levels[lev][idx_dst], tag = lev)
 				send_large_data(my_dict, levels[lev][idx_dst], lev, comm)
-		                my_dict = nothing
+				my_dict = nothing
 				#GC.gc()
 				@info "$(Dates.format(now(), "HH:MM:SS")) proc $(rank) after converging: free memory $(Sys.free_memory()/1024^3)"
 			end # if in(rank, lev)
