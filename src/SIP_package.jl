@@ -540,7 +540,7 @@ function is_max(myDict, win, length_win)
 
 		end # if get(myDict, win, 0) > win_freq
 	end # for position
-	@info "returning something"
+	#@info "returning something"
 	return win # only if it is a local max
 end # EOF
 
