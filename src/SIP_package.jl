@@ -767,11 +767,14 @@ OUTPUT:
 - surr_dict::Dict{BitVector, Vector{Any}} -> the dict with as keys the local max, as values Vector{Any} [summed_surrounding_pixels, counts_of_occurrences] 
 """
 
-function template_matching(target_vid::BitArray{3}, loc_max_dict::Dict{BitVector, Int}, size_win::Tuple{Integer, Integer, Integer}, extension_surr::Int)
+function template_matching(target_vid::BitArray{3}, loc_max_dict, size_win::Tuple{Integer, Integer, Integer}, extension_surr::Int)
 	# vars for initialization
 	vid_dim = size(target_vid) # size of the video
 	size_surr = size_win .+ extension_surr * 2 # how big are the neighbors of the target win -> obtained adding the extension (*2 because each dimension has 2 sides)
 	surr_dict = Dict(k => [zeros(UInt64, size_surr[1], size_surr[2], size_surr[3]), 0] for k in keys(loc_max_dict)) # # initializes a dict with the same keys as the loc_max, but as value a Vector{Any} = [summed_surrounding_pixels, count_of_instances]
+	win_el = prod(size_win)
+	progression = reverse(0:win_el-1)
+	pow_of_2 = 2 .^ progression
 	for i_time in (1+extension_surr):((vid_dim[3]+1)-size_win[3]-extension_surr) # +/- bc I don't want to idx outside the video. Since each iteration is the onset of the index, we conclude the iterator at size_pic[1] - size_win[1] - extension_surroundings (s.t. the end of the window is within the pic)
 		lims_time = get_lims(i_time, size_win[3]) # computes the first and last rows of the current iteration of the glider
 		idx_time = lims_time[1]:lims_time[2] # used to idx the rows of the glider
@@ -782,14 +785,14 @@ function template_matching(target_vid::BitArray{3}, loc_max_dict::Dict{BitVector
 				lims_rows = get_lims(i_rows, size_win[1]) # computes the first and last rows of the current iteration of the glider
 				idx_rows = lims_rows[1]:lims_rows[2] # used to idx the rows of the glider
 				current_win = target_vid[idx_rows, idx_cols, idx_time] # index in the array
-				vec_current_win = vec(current_win)
-				if haskey(surr_dict, vec_current_win)
+				current_win_int = bin2int(current_win, pow_of_2)
+				if haskey(surr_dict, current_win_int)
 					lims_time_surr = (lims_time[1] - extension_surr, lims_time[2] + extension_surr) # appends the extensions over the limits to get a larger window
 					lims_rows_surr = (lims_rows[1] - extension_surr, lims_rows[2] + extension_surr)
 					lims_cols_surr = (lims_cols[1] - extension_surr, lims_cols[2] + extension_surr)
 					current_surr = target_vid[lims_rows_surr[1]:lims_rows_surr[2], lims_cols_surr[1]:lims_cols_surr[2], lims_time_surr[1]:lims_time_surr[2]]
-					surr_dict[vec_current_win][1] += UInt64.(current_surr)
-					surr_dict[vec_current_win][2] += 1
+					surr_dict[current_win_int][1] += UInt64.(current_surr)
+					surr_dict[current_win_int][2] += 1
 				end # if current_win==target_win
 			end # for i_cols
 		end # for i_rows
@@ -1009,6 +1012,19 @@ function json2intdict(path2dict::String)::Dict{Int64, UInt64}
 	return int_dict
 end
 
+"""
+int2win 
+Converts an int key into the respective win
+"""
+
+function int2win(key, win_dims)
+	str_key = bitstring(key)
+	tot_bits = prod(win_dims)
+	str_key = str_key[end-tot_bits+1:end]
+	bit_vec_key = BitVector(c == '1' for c in str_key)
+	win = reshape(bit_vec_key, win_dims)
+	return win
+end # EOF
 
 
 # =========================

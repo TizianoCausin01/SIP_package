@@ -34,7 +34,8 @@ num_of_iterations = 1
 iter_idx = 1 #add a for loop if I'll need to do more than one iteration
 extension_surr = 2
 dict_max_path = "$(loc_max_path)/loc_max_$(name_vid)_iter$(iter_idx).json"
-loc_max_dict = json2dict(dict_max_path)
+loc_max_dict = json2intdict(dict_max_path)
+
 ##
 files_names = readdir(split_folder)
 n_tasks = length(files_names) # also the length of it
