@@ -93,7 +93,7 @@ for iter_idx in 1:num_of_iterations
 				MPI.Irecv!(start, root, rank + 32, comm) # receives stuff
 				start = start[1] # takes just the first element of the vector (it's a vector because it's a receive buffer)
 				@info "worker $(rank) starts doing loc_max"
-                                loc_max = parallel_get_loc_max_ham(myDict, top_counts, start, jump, ham_dist)
+				loc_max = parallel_get_loc_max_ham(myDict, top_counts, start, jump, ham_dist, glider_dim)
 				@info "worker $(rank) ended doing loc_max"
 				mex = MPI.serialize(loc_max)
 				mex_comp = transcode(ZlibCompressor, mex)
@@ -102,7 +102,7 @@ for iter_idx in 1:num_of_iterations
 				@info "rank $(rank) sends list of length $(len_mex)"
 				MPI.Wait(len_req)
 				MPI.Isend(mex_comp, root, rank + 32, comm)
-                                @info "worker $(rank): sent max"
+				@info "worker $(rank): sent max"
 				global stop = 1 # to break the while loop
 			end # if ismessage
 		end # while stop != 1
