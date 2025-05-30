@@ -94,12 +94,16 @@ for iter_idx in 1:num_of_iterations
 				MPI.Irecv!(start, root, rank + 32, comm) # receives stuff
 				start = start[1] # takes just the first element of the vector (it's a vector because it's a receive buffer)
 				loc_max = parallel_get_loc_max(myDict, top_counts, start, jump, length_win)
-				mex = MPI.serialize(loc_max)
-				len_mex = Int32(length(mex))
+				loc_max = MPI.serialize(loc_max)
+				len_mex = Int32(length(loc_max))
 				len_req = MPI.Isend(len_mex, root, rank + 64, comm)
 				@info "rank $(rank) sends list of length $(len_mex)"
 				MPI.Wait(len_req)
-				MPI.Isend(mex, root, rank + 32, comm)
+				MPI.Isend(loc_max, root, rank + 32, comm)
+                                loc_max = nothing
+                                myDict = nothing
+                                top_counts = nothing
+			        @info "$(Dates.format(now(), "HH:MM:SS")) worker $(rank): free memory $(Sys.free_memory()/1024^3), max size by now: $(Sys.maxrss()/1024^3)"
 				global stop = 1 # to break the while loop
 			end # if ismessage
 		end # while stop != 1
