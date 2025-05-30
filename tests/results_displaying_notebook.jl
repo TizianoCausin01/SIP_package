@@ -37,8 +37,8 @@ begin
     results_path = "/Users/tizianocausin/OneDrive - SISSA/data_repo/SIP_results"
 	img_path = "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/figures_SIP"
 	file_name = "snow_walk"
-	cg_dims = (3,3,3)
-	win_dims = (3,3,3)
+	cg_dims = (3,3,1)
+	win_dims = (3,3,2)
 	iterations_num = 5
 end
 
@@ -160,6 +160,8 @@ end
 md"## loc max hamming distance = $ham_dist"
 
 # ╔═╡ 0ceffe95-d4ec-4421-8f7d-ebedd6181477
+# ╠═╡ disabled = true
+#=╠═╡
 begin
 	theme(:default)
     default(background_color=:lightgray) 
@@ -172,6 +174,7 @@ begin
 	end every 1 
 	gif(anim_h, "$(img_path)/loc_max_ham_$(ham_dist)_$(file_name)_cg_$(cg_dims[1])x$(cg_dims[2])x$(cg_dims[3])_win_$(win_dims[1])x$(win_dims[2])x$(win_dims[3])_iter$(iter_idx).gif", fps = 1)
 end
+  ╠═╡ =#
 
 # ╔═╡ 0eabd6ab-2ea1-4835-9070-2abf3b298866
 begin

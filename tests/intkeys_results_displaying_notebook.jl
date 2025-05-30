@@ -36,9 +36,9 @@ end
 begin
     results_path = "/Users/tizianocausin/OneDrive - SISSA/data_repo/SIP_results"
 	img_path = "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/figures_SIP"
-	file_name = "snow_walk"
-	cg_dims = (3,3,1)
-	win_dims = (3,3,3)
+	file_name = "idaho"
+	cg_dims = (3,3,3)
+	win_dims = (4,4,2)
 	iterations_num = 5
 end
 
@@ -95,34 +95,6 @@ d = json2intdict(counts_dict_path)
 end
   ╠═╡ =#
 
-# ╔═╡ 0a1e467d-e69c-4536-a0cf-ce9916f0184d
-SIP_package.bin2int(BitArray([0 0 0; 0 0 0; 0 0 0;;; 1 1 1; 1 1 1; 1 1 1;;; 0 0 0; 0 0 0; 0 0 0]), 2 .^reverse(0:26))
-
-# ╔═╡ c593c9c4-85fe-4043-805a-09bc1c050acf
-#=╠═╡
-Int(d[261632])
-  ╠═╡ =#
-
-# ╔═╡ 103d4d30-4cc1-4efa-8e43-b9f3fd59c1ca
-function isstatic(win)
-	if all(win[:,:,1]==win[:,:,2]) & all(win[:,:,1]==win[:,:,3])
-		return true
-	else
-		return false
-	end
-
-end #EOF
-
-# ╔═╡ bf8ca8bf-4b66-4e16-a50d-598f54c7f5f6
-begin
-    loc_max_iter_path = "$(loc_max_path)/loc_max_$(file_name)_iter$(iter_idx).json"
-    loc_max_dict = json2intdict(loc_max_iter_path)
-	sorted_loc_max = sort(collect(loc_max_dict), by = x -> x[2], rev = true)
-end
-
-# ╔═╡ 4cbc0676-e105-43a7-bc8d-0e1fa937978a
-@bind start_at Slider(1:length(loc_max_dict)-top_n, show_value=true, default=1) 
-
 # ╔═╡ 46d1f143-55a2-4d67-ac4e-25a0c9dbfa7e
 #=╠═╡
 begin
@@ -137,12 +109,24 @@ end
 
   ╠═╡ =#
 
+# ╔═╡ 103d4d30-4cc1-4efa-8e43-b9f3fd59c1ca
+function isstatic(win)
+	if all(win[:,:,1]==win[:,:,2]) & all(win[:,:,1]==win[:,:,3])
+		return true
+	else
+		return false
+	end
+
+end #EOF
+
 # ╔═╡ 16ccffee-bcf4-404b-8aee-8a2b4eb88df5
 #=╠═╡
 print(typeof(sorted_keys[1].second))
   ╠═╡ =#
 
 # ╔═╡ c83adfee-f82e-42ff-9665-a2306d2adb41
+# ╠═╡ disabled = true
+#=╠═╡
 begin
 count_s=0
 count =0
@@ -155,6 +139,35 @@ for key in keys(loc_max_dict)
 end	# for key in keys(d)
 	print(count_s/count)
 end
+  ╠═╡ =#
+
+# ╔═╡ 344381e8-b921-40a7-a8af-a362bb6024fb
+# ╠═╡ disabled = true
+#=╠═╡
+begin
+	theme(:default)
+    default(background_color=:lightgray) 
+	animk = @animate for frame_idx in 1 : win_dims[3]
+            global plot_listk = [plot(
+            heatmap(el[:, :, frame_idx], color=:grays, axis=false, grid=false),  # Base heatmap
+            ) for el in key_list]  # Enumerate for titles
+		title_plot = plot(title="Overall Title", grid=false, showaxis=false, framestyle=:none)
+            plot(plot_list...)  # Adjust layout as needed
+	end every 1 
+	gif(animk, "$(img_path)/loc_max_$(file_name)_cg_$(cg_dims[1])x$(cg_dims[2])x$(cg_dims[3])_win_$(win_dims[1])x$(win_dims[2])x$(win_dims[3])_iter$(iter_idx).gif", fps = 1)
+	
+end
+  ╠═╡ =#
+
+# ╔═╡ bf8ca8bf-4b66-4e16-a50d-598f54c7f5f6
+begin
+    loc_max_iter_path = "$(loc_max_path)/loc_max_$(file_name)_iter$(iter_idx).json"
+    loc_max_dict = json2intdict(loc_max_iter_path)
+	sorted_loc_max = sort(collect(loc_max_dict), by = x -> x[2], rev = true)
+end
+
+# ╔═╡ 4cbc0676-e105-43a7-bc8d-0e1fa937978a
+@bind start_at Slider(1:length(loc_max_dict)-top_n, show_value=true, default=1) 
 
 # ╔═╡ f439e04e-14d9-49e2-bcae-75d7be06f01c
 loc_max_iter_path
@@ -185,23 +198,6 @@ begin
 	gif(anim, "$(img_path)/loc_max_$(file_name)_cg_$(cg_dims[1])x$(cg_dims[2])x$(cg_dims[3])_win_$(win_dims[1])x$(win_dims[2])x$(win_dims[3])_iter$(iter_idx).gif", fps = 1)
 	
 end
-
-# ╔═╡ 344381e8-b921-40a7-a8af-a362bb6024fb
-#=╠═╡
-begin
-	theme(:default)
-    default(background_color=:lightgray) 
-	animk = @animate for frame_idx in 1 : win_dims[3]
-            global plot_listk = [plot(
-            heatmap(el[:, :, frame_idx], color=:grays, axis=false, grid=false),  # Base heatmap
-            ) for el in key_list]  # Enumerate for titles
-		title_plot = plot(title="Overall Title", grid=false, showaxis=false, framestyle=:none)
-            plot(plot_list...)  # Adjust layout as needed
-	end every 1 
-	gif(animk, "$(img_path)/loc_max_$(file_name)_cg_$(cg_dims[1])x$(cg_dims[2])x$(cg_dims[3])_win_$(win_dims[1])x$(win_dims[2])x$(win_dims[3])_iter$(iter_idx).gif", fps = 1)
-	
-end
-  ╠═╡ =#
 
 # ╔═╡ d7228c76-3653-477e-9f5f-78daeed3faf8
 # ╠═╡ disabled = true
@@ -383,8 +379,6 @@ savefig(hm, "$(img_path)/$(file_name)_cg_$(cg_dims[1])x$(cg_dims[2])x$(cg_dims[3
 # ╟─d1bd8aab-9f32-4523-8bd3-e2e27e692b8b
 # ╟─4cbc0676-e105-43a7-bc8d-0e1fa937978a
 # ╠═f40ff0a6-a84c-4728-891b-070ee1daa872
-# ╠═0a1e467d-e69c-4536-a0cf-ce9916f0184d
-# ╠═c593c9c4-85fe-4043-805a-09bc1c050acf
 # ╠═46d1f143-55a2-4d67-ac4e-25a0c9dbfa7e
 # ╠═103d4d30-4cc1-4efa-8e43-b9f3fd59c1ca
 # ╠═16ccffee-bcf4-404b-8aee-8a2b4eb88df5

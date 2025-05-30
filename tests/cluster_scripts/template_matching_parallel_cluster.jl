@@ -121,7 +121,7 @@ else # I am worker
 				@info "proc $(rank): starting binarization   $(Dates.format(now(), "HH:MM:SS"))"
 				bin_vid = whole_video_conversion(joinpath(split_folder, files_names[current_data]))
 				@info "proc $(rank): video converted, starting template matching   $(Dates.format(now(), "HH:MM:SS"))"
-				current_dict = template_matching(bin_vid[:, :, 1:10], loc_max_dict, glider_dim, extension_surr)
+				current_dict = template_matching(bin_vid, loc_max_dict, glider_dim, extension_surr)
 				@info "proc $(rank): template matching finished, sending results...   $(Dates.format(now(), "HH:MM:SS"))"
 				serialized_dict = MPI.serialize(current_dict)
 				comp_dict = transcode(ZlibCompressor, serialized_dict)
