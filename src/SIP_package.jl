@@ -651,7 +651,7 @@ end # EOF
 
 function parallel_get_loc_max_ham(myDict, top_nth_sorted_counts, start, iterations, dist_required, win_dims)
 	length_win = prod(win_dims)
-	loc_max = Vector{BitVector}(undef, 0) # initializes as a vector of BitVectors
+	loc_max = Vector{Int64}(undef, 0) # initializes as a vector of BitVectors
 	if dist_required == length_win
 		@warn "you are just asking for the global maximum"
 	elseif dist_required > length_win
