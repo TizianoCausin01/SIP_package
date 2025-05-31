@@ -1432,6 +1432,58 @@ function mergers_convergence(rank, mergers_arr, my_dict, num_of_iterations, resu
 	end # if rank == levels[end][1]
 end # EOF
 
+function tm_mergers_convergence(rank, mergers_arr, my_dict, num_of_iterations, results_folder, name_vid, extension_surr, comm)
+	@info "not using the length"
+	levels = get_steps_convergence(mergers_arr)
+	@info "$(Dates.format(now(), "HH:MM:SS")) proc $(rank) before converging: free memory $(Sys.free_memory()/1024^3)"
+	if rank == mergers_arr[1]
+		@info "$(Dates.format(now(), "HH:MM:SS")) levels: $(levels)"
+	end # if rank==0
+	#new_dict_buffer = Vector{UInt32}(undef, 1)
+	for lev in 1:(length(levels)-1) # stops before the last el in levels
+		if in(rank, levels[lev]) # if the process is within the current levels iteration (otherwise it has already sent its dict)
+			if in(rank, levels[lev+1]) # in case it is a receiver (odd-indexed, it will be present also in the nxt step)
+				if rank + 1 <= levels[lev][end] # for the margins, it lets pass only the processes that have someone above, otherwise there is no merging at that step for the margin
+					idx_src = findfirst(rank .== levels[lev]) + 1 # computes the index of the source process (one idx up the idx of the process)
+					# new_dict, status = MPI.recv(levels[lev][idx_src], lev, comm) # receives the new dict
+					new_dict = rec_large_data(levels[lev][idx_src], lev, comm)
+					#new_dict_length = MPI.Recv(UInt32, comm; source = levels[lev][idx_src], tag = lev)
+					# we recycle the memory allotted to dict_buffer from one iteration to the next
+					#resize!(new_dict_buffer, new_dict_length)
+					#MPI.Recv!(new_dict_buffer, comm; source = levels[lev][idx_src], tag = lev)	
+					#new_dict_ser = MPI.Recv(UInt32, comm; source = levels[lev][idx_src], tag = lev)
+					#new_dict = transcode(ZlibDecompressor, new_dict_buffer)
+					#new_dict = MPI.deserialize(new_dict_buffer)					
+					#rec_large_data(levels[lev][idx_src],lev , comm)
+					new_dict = MPI.deserialize(new_dict)
+					merge_vec_dicts(my_dict, new_dict, num_of_iterations)
+					new_dict = nothing
+					#GC.gc()
+					@info "$(Dates.format(now(), "HH:MM:SS")) rank $(rank): merged with dict from rank $(levels[lev][idx_src])"
+				end # if proc + 1 <= length(mergers) 
+			else
+				idx_dst = findfirst(rank .== levels[lev]) - 1 # finds the idx of the receiver (one idx below its)
+				my_dict = MPI.serialize(my_dict)
+				send_large_data(my_dict, levels[lev][idx_dst], lev, comm)
+				my_dict = nothing
+				#GC.gc()
+				@info "$(Dates.format(now(), "HH:MM:SS")) proc $(rank) after converging: free memory $(Sys.free_memory()/1024^3)"
+			end # if in(rank, lev)
+		end # if in(rank, levels[lev])
+	end # for lev in levels
+	tm_folder = "$(results_folder)/template_matching_$(name_vid)"
+	if !isdir(tm_folder) # checks if the directory already exists
+		mkpath(tm_folder) # if not, it creates the folder where to put the split_files
+	end # if !isdir(dir_path)
+	if rank == levels[end][1] # if it's the last process on top of the hierarchy, saves the dict
+		for iter_idx in 1:num_of_iterations
+			open("$(tm_folder)/template_matching_ext_$(extension_surr)_$(name_vid)_iter$(iter_idx).json", "w") do file # the folder has to be already present 
+				JSON.print(file, my_dict[iter_idx])
+			end # open counts
+		end # for iter_idx in 1:num_of_iterations
+	end # if rank == levels[end][1]
+end # EOF
+
 """
 get_steps_convergence
 Function to get the steps for final convergence across mergers. It works with the indeces of each merger within
