@@ -1105,7 +1105,7 @@ OUTPUT:
 - tot_sh_entropy::AbstractFloat -> the total Shannon's entropy of the probability distribution
 """
 
-function tot_sh_entropy(dict_prob::Dict{BitVector, Float32})::Float32
+function tot_sh_entropy(dict_prob)::Float32
 	sh_entropy = 0
 	for k in keys(dict_prob)
 		sh_entropy -= sing_sh_entropy(dict_prob[k])
