@@ -36,7 +36,7 @@ end
 begin
     results_path = "/Users/tizianocausin/OneDrive - SISSA/data_repo/SIP_results"
 	img_path = "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/figures_SIP"
-	file_name = "idaho"
+	file_name = "oregon"
 	cg_dims = (3,3,3)
 	win_dims = (4,4,2)
 	iterations_num = 5
@@ -62,14 +62,11 @@ function int2win(key, win_dims)
 end # EOF
 
 # ╔═╡ 01cd98b5-8b79-417c-9cb5-bb500b590f03
-# ╠═╡ disabled = true
-#=╠═╡
 begin
 	ham_dist = 2
 	percentile = 40
 	loc_max_ham_path =  "$(counts_path)/loc_max_ham_$(ham_dist)_$(file_name)_$(percentile)percent"
 end
-  ╠═╡ =#
 
 # ╔═╡ 3ea45e23-3379-44af-9d9a-337dd76df947
 md"## iteration number"
@@ -223,6 +220,8 @@ end
 md"## loc max hamming distance 1"
 
 # ╔═╡ 9aa557c0-6ca8-43e8-9dc6-bfca1add7fed
+# ╠═╡ disabled = true
+#=╠═╡
 begin
 	theme(:default)
     default(background_color=:lightgray) 
@@ -234,27 +233,27 @@ begin
 	end every 1 fps=2
 	gif(anim_tm, "$(img_path)/tm_$(file_name)_cg_$(cg_dims[1])x$(cg_dims[2])x$(cg_dims[3])_win_$(win_dims[1])x$(win_dims[2])x$(win_dims[3]).gif", fps = 2)
 end
-
-# ╔═╡ 3df52c1e-cd9b-4077-92b5-32e38b02df43
-# ╠═╡ disabled = true
-#=╠═╡
-begin
-    loc_max_ham_iter_path = "$(loc_max_ham_path)/loc_max_ham_$(ham_dist)_$(file_name)_iter$(iter_idx).json"
-    loc_max_ham_dict = json2dict(loc_max_ham_iter_path)
-	sorted_loc_max_ham = sort(collect(loc_max_ham_dict), by = x -> x[2], rev = true)
-end
   ╠═╡ =#
 
+# ╔═╡ 3df52c1e-cd9b-4077-92b5-32e38b02df43
+begin
+    loc_max_ham_iter_path = "$(loc_max_ham_path)/loc_max_ham_$(ham_dist)_$(file_name)_iter$(iter_idx).json"
+    loc_max_ham_dict = json2intdict(loc_max_ham_iter_path)
+	sorted_loc_max_ham = sort(collect(loc_max_ham_dict), by = x -> x[2], rev = true)
+end
+
 # ╔═╡ edc2f21b-ba35-419c-971e-1cb0a5a4feaf
-#=╠═╡
 begin
 loc_max_ham_list = []
-    for (win_h, _) in sorted_loc_max_ham #[start_at:start_at+top_n-1]
-		target_win_h = reshape(BitVector(win_h), win_dims)
+    for (win_h, _) in sorted_loc_max_ham[start_at:start_at+top_n-1]
+		target_win_h = int2win(win_h, win_dims)
 		push!(loc_max_ham_list, Gray.(target_win_h))
 	end # for key in keys(loc_max_dict)
 end
-  ╠═╡ =#
+
+
+# ╔═╡ 49c62c28-c111-4f18-94b4-75a34290cc63
+length(loc_max_ham_list)
 
 # ╔═╡ 98111faa-f3e5-4659-a81e-304b906a651f
 #=╠═╡
@@ -262,7 +261,6 @@ md"## loc max hamming distance = $ham_dist"
   ╠═╡ =#
 
 # ╔═╡ 0ceffe95-d4ec-4421-8f7d-ebedd6181477
-#=╠═╡
 begin
 	theme(:default)
     default(background_color=:lightgray) 
@@ -275,7 +273,6 @@ begin
 	end every 1 
 	gif(anim_h, "$(img_path)/loc_max_ham_$(ham_dist)_$(file_name)_cg_$(cg_dims[1])x$(cg_dims[2])x$(cg_dims[3])_win_$(win_dims[1])x$(win_dims[2])x$(win_dims[3])_iter$(iter_idx).gif", fps = 1)
 end
-  ╠═╡ =#
 
 # ╔═╡ 0eabd6ab-2ea1-4835-9070-2abf3b298866
 # ╠═╡ disabled = true
@@ -394,6 +391,7 @@ savefig(hm, "$(img_path)/$(file_name)_cg_$(cg_dims[1])x$(cg_dims[2])x$(cg_dims[3
 # ╠═9aa557c0-6ca8-43e8-9dc6-bfca1add7fed
 # ╠═3df52c1e-cd9b-4077-92b5-32e38b02df43
 # ╠═edc2f21b-ba35-419c-971e-1cb0a5a4feaf
+# ╠═49c62c28-c111-4f18-94b4-75a34290cc63
 # ╟─98111faa-f3e5-4659-a81e-304b906a651f
 # ╠═0ceffe95-d4ec-4421-8f7d-ebedd6181477
 # ╠═0eabd6ab-2ea1-4835-9070-2abf3b298866
