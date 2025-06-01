@@ -773,15 +773,15 @@ OUTPUT:
 
 function template_matching(target_vid::BitArray{3}, loc_max_dict, size_win::Tuple{Integer, Integer, Integer}, extension_surr::Int)
 	# vars for initializationi
-        target_vid = target_vid[:,:,1:10]
+	target_vid = target_vid[:, :, 1:10]
 	vid_dim = size(target_vid) # size of the video
 	size_surr = size_win .+ extension_surr * 2 # how big are the neighbors of the target win -> obtained adding the extension (*2 because each dimension has 2 sides)
-	surr_dict = Dict(k => [zeros(UInt64, size_surr[1], size_surr[2], size_surr[3]), 0] for k in keys(loc_max_dict)) # # initializes a dict with the same keys as the loc_max, but as value a Vector{Any} = [summed_surrounding_pixels, count_of_instances]
+	surr_dict = Dict(k => [zeros(UInt64, prod(size_surr)), 0] for k in keys(loc_max_dict)) # # initializes a dict with the same keys as the loc_max, but as value a Vector{Any} = [summed_surrounding_pixels, count_of_instances]
 	win_el = prod(size_win)
 	progression = reverse(0:win_el-1)
 	pow_of_2 = 2 .^ progression
 	for i_time in (1+extension_surr):((vid_dim[3]+1)-size_win[3]-extension_surr) # +/- bc I don't want to idx outside the video. Since each iteration is the onset of the index, we conclude the iterator at size_pic[1] - size_win[1] - extension_surroundings (s.t. the end of the window is within the pic)
-                lims_time = get_lims(i_time, size_win[3]) # computes the first and last rows of the current iteration of the glider
+		lims_time = get_lims(i_time, size_win[3]) # computes the first and last rows of the current iteration of the glider
 		idx_time = lims_time[1]:lims_time[2] # used to idx the rows of the glider
 		for i_cols in (1+extension_surr):((vid_dim[2]+1)-size_win[2]-extension_surr) # - 
 			lims_cols = get_lims(i_cols, size_win[2]) # computes the first and last cols of the current iteration of the glider
@@ -795,7 +795,7 @@ function template_matching(target_vid::BitArray{3}, loc_max_dict, size_win::Tupl
 					lims_time_surr = (lims_time[1] - extension_surr, lims_time[2] + extension_surr) # appends the extensions over the limits to get a larger window
 					lims_rows_surr = (lims_rows[1] - extension_surr, lims_rows[2] + extension_surr)
 					lims_cols_surr = (lims_cols[1] - extension_surr, lims_cols[2] + extension_surr)
-					current_surr = target_vid[lims_rows_surr[1]:lims_rows_surr[2], lims_cols_surr[1]:lims_cols_surr[2], lims_time_surr[1]:lims_time_surr[2]]
+					current_surr = vec(target_vid[lims_rows_surr[1]:lims_rows_surr[2], lims_cols_surr[1]:lims_cols_surr[2], lims_time_surr[1]:lims_time_surr[2]])
 					surr_dict[current_win_int][1] += UInt64.(current_surr)
 					surr_dict[current_win_int][2] += 1
 				end # if current_win==target_win
@@ -880,6 +880,12 @@ function load_dict_surroundings(path2dict::String, surr_dims::Tuple{Integer, Int
 end #EOF
 
 
+function load_intdict_surroundings(path2dict::String, surr_dims::Tuple{Integer, Integer, Integer})
+	str_dict = JSON.parsefile(path2dict)
+	# loops through the key=>value pairs, parses the keys, assigns the values to the tuples
+	dict_surr = Dict(parse(Int, k) => (UInt.(reshape(v[1], surr_dims)), v[2]) for (k, v) in str_dict)
+	return dict_surr
+end #EOF
 # =========================
 # PHYSICAL QUANTITIES    
 # =========================
