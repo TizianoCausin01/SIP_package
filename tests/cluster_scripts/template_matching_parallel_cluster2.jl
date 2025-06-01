@@ -1,4 +1,6 @@
-# master, workers, mergers, master_merger
+using Pkg
+cd("/leonardo/home/userexternal/tcausin0/virtual_envs/SIP_dev")
+Pkg.activate(".")
 # master: allocates jobs
 using SIP_package
 using MPI
@@ -7,9 +9,6 @@ using Dates
 using CodecZlib
 const Int = Int32
 ##
-using Pkg
-cd("/leonardo/home/userexternal/tcausin0/virtual_envs/SIP_dev")
-Pkg.activate(".")
 # vars for parallel
 MPI.Init()
 comm = MPI.COMM_WORLD
@@ -21,26 +20,22 @@ n_mergers = parse(Int, ARGS[8])
 mergers = 2:(1+n_mergers)
 workers = (1+mergers[end]):(nproc-1)
 name_vid = ARGS[1]
+glider_coarse_g_dim = Tuple(parse(Int, ARGS[i]) for i in 2:4)
+glider_dim = Tuple(parse(Int, ARGS[i]) for i in 5:7) # rows, cols, depth
 split_folder = "/leonardo_scratch/fast/Sis25_piasini/tcausin/SIP_data/$(name_vid)_split"
 results_path = "/leonardo_work/Sis25_piasini/tcausin/SIP_results"
 split_files = "$(split_folder)/$(name_vid)%03d.mp4"
+counts_folder = "$(results_path)/$(name_vid)_counts_cg_$(glider_coarse_g_dim[1])x$(glider_coarse_g_dim[2])x$(glider_coarse_g_dim[3])_win_$(glider_dim[1])x$(glider_dim[2])x$(glider_dim[3])"
 files_names = readdir(split_folder)
 n_tasks = length(files_names) # also the length of it
 tasks = 1:n_tasks
-loc_max_path = "$(results_path)/loc_max_$(name_vid)"
+loc_max_path = "$(counts_folder)/loc_max_$(name_vid)"
 num_of_iterations = 1
 iter_idx = 1 #add a for loop if I'll need to do more than one iteration
 extension_surr = 2
 dict_max_path = "$(loc_max_path)/loc_max_$(name_vid)_iter$(iter_idx).json"
 loc_max_dict = json2intdict(dict_max_path)
 # vars for sampling
-num_of_iterations = 5 # counting the 0th iteration
-glider_coarse_g_dim = Tuple(parse(Int, ARGS[i]) for i in 2:4)
-glider_dim = Tuple(parse(Int, ARGS[i]) for i in 5:7) # rows, cols, depth
-results_folder = "$(results_path)/$(name_vid)_counts_cg_$(glider_coarse_g_dim[1])x$(glider_coarse_g_dim[2])x$(glider_coarse_g_dim[3])_win_$(glider_dim[1])x$(glider_dim[2])x$(glider_dim[3])"
-if !isdir(results_folder) # checks if the directory already exists
-	mkpath(results_folder) # if not, it creates the folder where to put the split_files
-end # if !isdir(dir_path)
 ##
 if rank == root
 	@info "--------------------- \n \n \n \n \n STARTING TEMPLATE MATCHING \n $(Dates.format(now(), "HH:MM:SS")) \n \n \n \n \n ---------------------"
@@ -150,13 +145,13 @@ elseif in(rank, mergers) # I am merger
 
 	if (@isdefined tot_dicts) && tot_dicts !== nothing # checkpoints
 		for iter_idx in 1:num_of_iterations
-			open("$(results_folder)/counts_$(name_vid)_iter$(iter_idx)_rank$(rank).json", "w") do file # the folder has to be already present 
+			open("$(counts_folder)/tm_$(name_vid)_iter$(iter_idx)_rank$(rank).json", "w") do file # the folder has to be already present 
 				JSON.print(file, tot_dicts[iter_idx])
 			end # open counts
 		end # for iter_idx in 1:num_of_iterations
 	end # if isdefined(Main, :tot_dicts)
 
-	mergers_convergence(rank, mergers, tot_dicts, num_of_iterations, results_folder, name_vid, extension_surr, comm)
+	tm_mergers_convergence(rank, mergers, tot_dicts, num_of_iterations, counts_folder, name_vid, extension_surr, comm)
 
 
 else # I am worker
@@ -172,6 +167,13 @@ else # I am worker
 
 		if current_data != -1 # if the message isn't the termination message
 			# current_dict = wrapper_sampling_parallel(joinpath(split_folder, files_names[current_data]), num_of_iterations, glider_coarse_g_dim, glider_dim)
+
+			 video_path = joinpath(split_folder, files_names[current_data])
+	@info "$(Dates.format(now(), "HH:MM:SS")) worker $(rank): running binarization,  free memory $(Sys.free_memory()/1024^3) max size by now: $(Sys.maxrss()/1024^3)"
+	flush(stdout)
+	bin_vid = whole_video_conversion(video_path) # converts a target yt video into a binarized one
+	# preallocation of dictionaries
+	@info "$(Dates.format(now(), "HH:MM:SS")) worker $(rank) before sampling: free memory $(Sys.free_memory()/1024^3) max size by now: $(Sys.maxrss()/1024^3)"
 			current_dict = [template_matching(bin_vid, loc_max_dict, glider_dim, extension_surr)]
 			current_dict = MPI.serialize(current_dict)
 			#current_dict = transcode(ZlibCompressor, current_dict)
