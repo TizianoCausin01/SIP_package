@@ -37,6 +37,7 @@ export wrapper_sampling,
 	get_fps,
 	centering_whitening,
 	mergers_convergence,
+	tm_mergers_convergence,
 	merge_vec_dicts
 
 # =========================
@@ -771,7 +772,8 @@ OUTPUT:
 """
 
 function template_matching(target_vid::BitArray{3}, loc_max_dict, size_win::Tuple{Integer, Integer, Integer}, extension_surr::Int)
-	# vars for initialization
+	# vars for initializationi
+        target_vid = target_vid[:,:,1:10]
 	vid_dim = size(target_vid) # size of the video
 	size_surr = size_win .+ extension_surr * 2 # how big are the neighbors of the target win -> obtained adding the extension (*2 because each dimension has 2 sides)
 	surr_dict = Dict(k => [zeros(UInt64, size_surr[1], size_surr[2], size_surr[3]), 0] for k in keys(loc_max_dict)) # # initializes a dict with the same keys as the loc_max, but as value a Vector{Any} = [summed_surrounding_pixels, count_of_instances]
@@ -779,7 +781,7 @@ function template_matching(target_vid::BitArray{3}, loc_max_dict, size_win::Tupl
 	progression = reverse(0:win_el-1)
 	pow_of_2 = 2 .^ progression
 	for i_time in (1+extension_surr):((vid_dim[3]+1)-size_win[3]-extension_surr) # +/- bc I don't want to idx outside the video. Since each iteration is the onset of the index, we conclude the iterator at size_pic[1] - size_win[1] - extension_surroundings (s.t. the end of the window is within the pic)
-		lims_time = get_lims(i_time, size_win[3]) # computes the first and last rows of the current iteration of the glider
+                lims_time = get_lims(i_time, size_win[3]) # computes the first and last rows of the current iteration of the glider
 		idx_time = lims_time[1]:lims_time[2] # used to idx the rows of the glider
 		for i_cols in (1+extension_surr):((vid_dim[2]+1)-size_win[2]-extension_surr) # - 
 			lims_cols = get_lims(i_cols, size_win[2]) # computes the first and last cols of the current iteration of the glider
@@ -815,7 +817,7 @@ OUTPUT
 - lims::Tuple{Int, 2} -> the beginning and the end of a certain glider dimension
 """
 
-function get_lims(i::Int, size_glider::Int)
+function get_lims(i, size_glider)
 	lims = (i, i + (size_glider - 1)) # the -1 because otherwise you'd get one element more (e.g. if size_glider=3 , 1:4 -> 4 elements)
 	return lims
 end
