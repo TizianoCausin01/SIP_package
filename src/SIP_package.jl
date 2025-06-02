@@ -773,7 +773,7 @@ OUTPUT:
 
 function template_matching(target_vid::BitArray{3}, loc_max_dict, size_win::Tuple{Integer, Integer, Integer}, extension_surr::Int)
 	# vars for initializationi
-	target_vid = target_vid[:, :, 1:10]
+	target_vid = target_vid[:, :, 1:100]
 	vid_dim = size(target_vid) # size of the video
 	size_surr = size_win .+ extension_surr * 2 # how big are the neighbors of the target win -> obtained adding the extension (*2 because each dimension has 2 sides)
 	surr_dict = Dict(k => [zeros(UInt64, prod(size_surr)), 0] for k in keys(loc_max_dict)) # # initializes a dict with the same keys as the loc_max, but as value a Vector{Any} = [summed_surrounding_pixels, count_of_instances]
