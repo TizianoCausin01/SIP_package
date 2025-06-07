@@ -16,9 +16,9 @@ tot_prob_dicts = [counts2prob(json2intdict("$(counts_path)/counts_$(file_name)_i
 ##
 sh_ent_vec = [tot_sh_entropy(tot_prob_dicts[iter]) for iter in 1:iterations_num]
 ##
-div_mat = Array{Any}(undef, iterations_num, iterations_num)
+div_mat = zeros(iterations_num, iterations_num)
 for i in 1:iterations_num
-	for j in 1:iterations_num
+	for j in 1:i
 		div_mat[i, j] = jsd(tot_prob_dicts[i], tot_prob_dicts[j])
 	end
 end
