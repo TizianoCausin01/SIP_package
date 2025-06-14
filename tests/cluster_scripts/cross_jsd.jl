@@ -22,5 +22,15 @@ for i in 1:iterations_num
 		div_mat[i, j] = jsd(tot_prob_dicts1[i], tot_prob_dicts2[j])
 	end
 end
-writedlm("$(counts_path1)/cross_jsd_$(file_name1)_vs_$(file_name2).csv", div_mat, ',')
-writedlm("$(counts_path2)/cross_jsd_$(file_name2)_vs_$(file_name1).csv", div_mat, ',')
+
+cross_folder1="$(counts_path1)/cross_jsd_$(file_name1)"
+cross_folder2="$(counts_path2)/cross_jsd_$(file_name2)"
+if !isdir(cross_folder1) # checks if the directory already exists
+	mkpath(cross_folder1) # if not, it creates the folder where to put the split_files
+end # if !isdir(dir_path)
+
+if !isdir(cross_folder2) # checks if the directory already exists
+	mkpath(cross_folder2) # if not, it creates the folder where to put the split_files
+end # if !isdir(dir_path)
+writedlm("$(cross_folder1)/cross_jsd_$(file_name1)_vs_$(file_name2).csv", div_mat, ',')
+writedlm("$(cross_folder2)/cross_jsd_$(file_name2)_vs_$(file_name1).csv", div_mat, ',')
