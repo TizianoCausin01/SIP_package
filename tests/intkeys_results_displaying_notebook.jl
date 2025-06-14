@@ -36,7 +36,7 @@ end
 begin
     results_path = "/Users/tizianocausin/OneDrive - SISSA/data_repo/SIP_results"
 	img_path = "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/figures_SIP"
-	file_name = "oregon"
+	file_name = "bryce_canyon"
 	cg_dims = (3,3,3)
 	win_dims = (4,4,2)
 	iterations_num = 5
@@ -92,20 +92,6 @@ d = json2intdict(counts_dict_path)
 end
   ╠═╡ =#
 
-# ╔═╡ 46d1f143-55a2-4d67-ac4e-25a0c9dbfa7e
-#=╠═╡
-begin
-key_list = []
-	sorted_keys = sort(collect(d), by = x -> x[2], rev = true)
-    for (key, _) in sorted_keys[start_at:start_at+top_n-1]
-		target_win = int2win(key, win_dims)
-		print(target_win)
-		push!(key_list, Gray.(target_win))
-	end # for key in keys(loc_max_dict)
-end
-
-  ╠═╡ =#
-
 # ╔═╡ 103d4d30-4cc1-4efa-8e43-b9f3fd59c1ca
 function isstatic(win)
 	if all(win[:,:,1]==win[:,:,2]) & all(win[:,:,1]==win[:,:,3])
@@ -115,28 +101,6 @@ function isstatic(win)
 	end
 
 end #EOF
-
-# ╔═╡ 16ccffee-bcf4-404b-8aee-8a2b4eb88df5
-#=╠═╡
-print(typeof(sorted_keys[1].second))
-  ╠═╡ =#
-
-# ╔═╡ c83adfee-f82e-42ff-9665-a2306d2adb41
-# ╠═╡ disabled = true
-#=╠═╡
-begin
-count_s=0
-count =0
-for key in keys(loc_max_dict)
-	if isstatic(int2win(key, (3,3,3)))
-		count_s +=1
-	end
-	count += 1
-
-end	# for key in keys(d)
-	print(count_s/count)
-end
-  ╠═╡ =#
 
 # ╔═╡ 344381e8-b921-40a7-a8af-a362bb6024fb
 # ╠═╡ disabled = true
@@ -165,6 +129,42 @@ end
 
 # ╔═╡ 4cbc0676-e105-43a7-bc8d-0e1fa937978a
 @bind start_at Slider(1:length(loc_max_dict)-top_n, show_value=true, default=1) 
+
+# ╔═╡ 46d1f143-55a2-4d67-ac4e-25a0c9dbfa7e
+#=╠═╡
+begin
+key_list = []
+	sorted_keys = sort(collect(d), by = x -> x[2], rev = true)
+    for (key, _) in sorted_keys[start_at:start_at+top_n-1]
+		target_win = int2win(key, win_dims)
+		print(target_win)
+		push!(key_list, Gray.(target_win))
+	end # for key in keys(loc_max_dict)
+end
+
+  ╠═╡ =#
+
+# ╔═╡ 16ccffee-bcf4-404b-8aee-8a2b4eb88df5
+#=╠═╡
+print(typeof(sorted_keys[1].second))
+  ╠═╡ =#
+
+# ╔═╡ c83adfee-f82e-42ff-9665-a2306d2adb41
+# ╠═╡ disabled = true
+#=╠═╡
+begin
+count_s=0
+count =0
+for key in keys(loc_max_dict)
+	if isstatic(int2win(key, (3,3,3)))
+		count_s +=1
+	end
+	count += 1
+
+end	# for key in keys(d)
+	print(count_s/count)
+end
+  ╠═╡ =#
 
 # ╔═╡ f439e04e-14d9-49e2-bcae-75d7be06f01c
 loc_max_iter_path
@@ -196,32 +196,34 @@ begin
 	
 end
 
+# ╔═╡ ac929d60-741d-4611-9535-873bf12c4b68
+function lload_intdict_surroundings(path2dict::String, surr_dims::Tuple{Integer, Integer, Integer})
+	str_dict = JSON.parsefile(path2dict)
+	# loops through the key=>value pairs, parses the keys, assigns the values to the tuples
+	print(size(str_dict["0"][1][1][1][1]))
+	
+	dict_surr = Dict(parse(Int, k) => (UInt.(reshape(v[1], surr_dims)), v[2]) for (k, v) in str_dict)
+	return dict_surr
+end #EOF
+
 # ╔═╡ d7228c76-3653-477e-9f5f-78daeed3faf8
-# ╠═╡ disabled = true
-#=╠═╡
 begin
 	extension_surr = 2
 	surr_dims = win_dims .+ extension_surr*2
-    surr_path = "$(counts_path)/template_matching_$(file_name)/template_matching_ext_$(extension_surr)_$(file_name).json"
-	surr_dict = load_dict_surroundings(surr_path, surr_dims)
+    surr_path = "$(counts_path)/template_matching_$(file_name)/template_matching_ext_$(extension_surr)_$(file_name)_iter1.json"
+	surr_dict = lload_intdict_surroundings(surr_path, surr_dims)
 	surr_list = []
 	# loads iteration one for which we did the template matching
 	loc_max_iter1_path = "$(loc_max_path)/loc_max_$(file_name)_iter1.json"
-	loc_max_dict_iter1 = json2dict(loc_max_iter1_path)
+	loc_max_dict_iter1 = json2intdict(loc_max_iter1_path)
 	sorted_loc_max_iter1 = sort(collect(loc_max_dict_iter1), by = x -> x[2], rev = true)
 	for (key, _) in sorted_loc_max_iter1[start_at:start_at+top_n-1]
 		surr_patch = Gray.(surr_dict[key][1]./surr_dict[key][2])
 		push!(surr_list, surr_patch)
 	end # for key in keys(loc_max_dict)
 end
-  ╠═╡ =#
-
-# ╔═╡ eeb857c1-ed7c-4b57-8144-d4e85720a327
-md"## loc max hamming distance 1"
 
 # ╔═╡ 9aa557c0-6ca8-43e8-9dc6-bfca1add7fed
-# ╠═╡ disabled = true
-#=╠═╡
 begin
 	theme(:default)
     default(background_color=:lightgray) 
@@ -233,7 +235,9 @@ begin
 	end every 1 fps=2
 	gif(anim_tm, "$(img_path)/tm_$(file_name)_cg_$(cg_dims[1])x$(cg_dims[2])x$(cg_dims[3])_win_$(win_dims[1])x$(win_dims[2])x$(win_dims[3]).gif", fps = 2)
 end
-  ╠═╡ =#
+
+# ╔═╡ 55292a20-d785-4dc4-800b-0a4260e38ffe
+md"## loc max hamming distance 1"
 
 # ╔═╡ 3df52c1e-cd9b-4077-92b5-32e38b02df43
 begin
@@ -256,9 +260,7 @@ end
 length(loc_max_ham_list)
 
 # ╔═╡ 98111faa-f3e5-4659-a81e-304b906a651f
-#=╠═╡
 md"## loc max hamming distance = $ham_dist"
-  ╠═╡ =#
 
 # ╔═╡ 0ceffe95-d4ec-4421-8f7d-ebedd6181477
 begin
@@ -275,29 +277,22 @@ begin
 end
 
 # ╔═╡ 0eabd6ab-2ea1-4835-9070-2abf3b298866
-# ╠═╡ disabled = true
-#=╠═╡
 begin
 	loc_max_ham_iter1_path = "$(loc_max_ham_path)/loc_max_ham_$(ham_dist)_$(file_name)_iter1.json"
-loc_max_ham_dict_iter1 = json2dict(loc_max_ham_iter1_path)
+loc_max_ham_dict_iter1 = json2intdict(loc_max_ham_iter1_path)
 	sorted_loc_max_ham_iter1 = sort(collect(loc_max_ham_dict_iter1), by = x -> x[2], rev = true)
 end
-  ╠═╡ =#
 
 # ╔═╡ f4acde1b-25da-4d4e-ad83-4a70c5dbca39
-#=╠═╡
 begin
 	surr_list_h=[]
-for (key_h, _) in sorted_loc_max_ham_iter1 #[start_at:start_at+top_n-1]
+for (key_h, _) in sorted_loc_max_ham_iter1[start_at:start_at+top_n-1]
 		surr_patch_h = Gray.(surr_dict[key_h][1]./surr_dict[key_h][2])
 		push!(surr_list_h, surr_patch_h)
 	end # for key in keys(loc_max_dict)
 end
-  ╠═╡ =#
 
 # ╔═╡ b6f7e723-20aa-4c88-aea5-f11c7a49127c
-# ╠═╡ disabled = true
-#=╠═╡
 begin
 	theme(:default)
     default(background_color=:lightgray) 
@@ -309,26 +304,20 @@ begin
 	end every 1 fps=2
 	gif(anim_tm_h, "$(img_path)/tm_$(file_name)_ham_$(ham_dist)_cg_$(cg_dims[1])x$(cg_dims[2])x$(cg_dims[3])_win_$(win_dims[1])x$(win_dims[2])x$(win_dims[3]).gif", fps = 2)
 end
-  ╠═╡ =#
 
 # ╔═╡ ba2f06ad-6ca9-4822-8c85-f6c481d50708
 md"## Shannon's entropy"
 
 # ╔═╡ 8c84beb4-84ef-4664-8e88-2c58fb454842
-# ╠═╡ disabled = true
-#=╠═╡
 begin
 	sh_ent_path = "$(counts_path)/sh_entropy_$(file_name).csv"
     sh_ent = readdlm(sh_ent_path, ',')	
 end
-  ╠═╡ =#
 
 # ╔═╡ bba7aa34-15fd-484b-b070-6fa228e6218b
 md"## Shannon-Jensen divergence"
 
 # ╔═╡ db25ac09-9879-4a4b-9a9c-c4730215277e
-# ╠═╡ disabled = true
-#=╠═╡
 begin
 	default(background_color = :white)
 	div_mat_path = "$(counts_path)/jsd_$(file_name).csv"
@@ -355,12 +344,9 @@ my_yellow_red_gradient = reverse(cgrad([
 	hm
 	
 end
-  ╠═╡ =#
 
 # ╔═╡ 1876f661-39e3-4988-8651-5e168c3f4b69
-#=╠═╡
 savefig(hm, "$(img_path)/$(file_name)_cg_$(cg_dims[1])x$(cg_dims[2])x$(cg_dims[3])_win_$(win_dims[1])x$(win_dims[2])x$(win_dims[3]).svg")
-  ╠═╡ =#
 
 # ╔═╡ Cell order:
 # ╠═a01b91a6-f395-11ef-3f4e-d13822cb03c3
@@ -387,8 +373,9 @@ savefig(hm, "$(img_path)/$(file_name)_cg_$(cg_dims[1])x$(cg_dims[2])x$(cg_dims[3
 # ╟─c977519c-504a-4e39-8a8d-3879f03b88b0
 # ╠═930fdd0b-aa1c-45fc-a7cf-938bc452fd43
 # ╠═d7228c76-3653-477e-9f5f-78daeed3faf8
-# ╠═eeb857c1-ed7c-4b57-8144-d4e85720a327
+# ╠═ac929d60-741d-4611-9535-873bf12c4b68
 # ╠═9aa557c0-6ca8-43e8-9dc6-bfca1add7fed
+# ╟─55292a20-d785-4dc4-800b-0a4260e38ffe
 # ╠═3df52c1e-cd9b-4077-92b5-32e38b02df43
 # ╠═edc2f21b-ba35-419c-971e-1cb0a5a4feaf
 # ╠═49c62c28-c111-4f18-94b4-75a34290cc63
