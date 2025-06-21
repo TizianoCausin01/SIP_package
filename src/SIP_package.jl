@@ -38,7 +38,9 @@ export wrapper_sampling,
 	centering_whitening,
 	mergers_convergence,
 	tm_mergers_convergence,
-	merge_vec_dicts
+	merge_vec_dicts,
+        jsd_workers,
+        jsd_master
 
 # =========================
 # IMPORTED PACKAGES
