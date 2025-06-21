@@ -1583,4 +1583,87 @@ function rec_large_data(src, tag, comm)
 	return data_rec
 end #EOF
 
+
+
+"""
+jsd_master
+Sends to each worker its part of dict to run jsd on it and receive the parts back to sum.
+
+INPUT:
+- d1, d2::Dict{Int, UInt} -> the dicts to compare
+- rank::Int -> the rank of the master
+- nproc::Int -> number of processes
+- comm::MPI.comm -> the communication graph
+
+OUTPUT
+- tot_jsd::Float32 -> the total jsd returned
+"""
+function jsd_master(d1, d2, rank, nproc, comm)
+	global tot_jsd = 0
+	@info "I am root"
+
+	k1 = collect(keys(d1))
+	k2 = collect(keys(d2))
+	k = union(k1, k2)
+	keys_num = length(k)
+	@info "num keys $keys_num"
+	jump = cld(keys_num, nproc - 1)
+	@info "jump: $jump"
+	global current_start = Int32(0) # is the number of iterations we will drop before our target, that's why we start from 0
+	global tot = 0
+	for dst in 1:(nproc-1) # loops over the processors to deal the task
+		@info "curr proc: $dst"
+		start = current_start + 1
+		global current_start += jump
+		finish = current_start
+		if finish > keys_num
+			finish = keys_num
+		end # if finish > keys_num
+
+		@info "start: $start ; finish: $finish"
+		curr_keys = k[start:finish]
+
+		global tot += length(curr_keys)
+		subset_d1 = Dict(key => get!(d1, key, 0) for key in curr_keys)
+		subset_d1 = MPI.serialize(subset_d1)
+		subset_d2 = Dict(key => get!(d2, key, 0) for key in curr_keys)
+		subset_d2 = MPI.serialize(subset_d2)
+		send_large_data(subset_d1, dst, dst + 32, comm)
+		send_large_data(subset_d2, dst, dst + 32, comm)
+
+	end # for dst in 1:(nproc-1)
+
+	for i in 1:(nproc-1)
+		local jsd_part = MPI.recv(comm; source = MPI.ANY_SOURCE, tag = 32)
+		global tot_jsd += jsd_part
+	end # for i in 1:(nproc-1)
+	@info "tot jsd = $tot_jsd"
+	return tot_jsd
+end #EOF
+
+
+"""
+jsd_workers
+Each worker takes its part of dict to run jsd on it.
+INPUT:
+- root::Int -> the master
+- rank::Int -> the rank of the worker
+- comm::MPI.comm -> the communication graph
+
+OUTPUT
+none
+"""
+
+function jsd_workers(root, rank, comm)
+	d1 = rec_large_data(0, rank + 32, comm)
+	d1 = MPI.deserialize(d1)
+	d2 = rec_large_data(0, rank + 32, comm)
+	d2 = MPI.deserialize(d2)
+	jsd_part = Float32(jsd(d1, d2))
+	@info "jsd_part $jsd_part"
+	MPI.send(jsd_part, Int32(0), 32, comm)
+end # EOF
+
+
+
 end # module SIP_package
