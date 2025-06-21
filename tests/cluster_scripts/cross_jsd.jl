@@ -12,10 +12,10 @@ cg_dims = Tuple(parse(Int, ARGS[i]) for i in 3:5)
 win_dims = Tuple(parse(Int, ARGS[i]) for i in 6:8) # rows, cols, depth
 iterations_num = 5
 counts_path1 = "$(results_path)/$(file_name1)_counts_cg_$(cg_dims[1])x$(cg_dims[2])x$(cg_dims[3])_win_$(win_dims[1])x$(win_dims[2])x$(win_dims[3])"
-tot_prob_dicts1 = [counts2prob(json2dict("$(counts_path1)/counts_$(file_name1)_iter$(iter).json"), 8) for iter in 1:iterations_num]
+tot_prob_dicts1 = [counts2prob(json2intdict("$(counts_path1)/counts_$(file_name1)_iter$(iter).json"), 8) for iter in 1:iterations_num]
 counts_path2 = "$(results_path)/$(file_name2)_counts_cg_$(cg_dims[1])x$(cg_dims[2])x$(cg_dims[3])_win_$(win_dims[1])x$(win_dims[2])x$(win_dims[3])"
-tot_prob_dicts2 = [counts2prob(json2dict("$(counts_path2)/counts_$(file_name2)_iter$(iter).json"), 8) for iter in 1:iterations_num]
-##
+tot_prob_dicts2 = [counts2prob(json2intdict("$(counts_path2)/counts_$(file_name2)_iter$(iter).json"), 8) for iter in 1:iterations_num]
+
 div_mat = zeros(iterations_num, iterations_num)
 for i in 1:iterations_num
 	for j in 1:i
