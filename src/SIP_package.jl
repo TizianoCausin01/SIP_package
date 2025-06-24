@@ -39,8 +39,10 @@ export wrapper_sampling,
 	mergers_convergence,
 	tm_mergers_convergence,
 	merge_vec_dicts,
-        jsd_workers,
-        jsd_master
+	jsd_workers,
+	jsd_master,
+	master_json2intdict,
+	workers_json2intdict
 
 # =========================
 # IMPORTED PACKAGES
@@ -1666,6 +1668,91 @@ function jsd_workers(root, rank, comm)
 	MPI.send(jsd_part, Int32(0), 32, comm)
 end # EOF
 
+"""
+partial_json2intdict
+Converts to a dict only a selected subset of keys
+INPUT:
+- str_dict::Dict{string, Int} -> dictionary converted with json
+- keys::Vector{Int} -> subset of keys to convert into dict
 
+OUTPUT:
+- int_dict::Dict{Int64, UInt64} -> int dict with just the subset of keys
+"""
+function partial_json2intdict(str_dict, keys)::Dict{Int64, UInt64}
+	int_dict = Dict{Int64, UInt64}()      # Preallocate target dict
+	str_keys = Set(string.(keys))
+
+	for key in keys
+		# try
+		int_key = parse(Int64, key)
+		int_dict[int_key] = str_dict[key]
+		# catch e
+		# 	println("Skipping entry ($key => $value): ", e)
+		# end
+	end
+	return int_dict
+end
+
+"""
+master_json2intdict
+Sends to the workers the different subset of keys and then merges the converted parital dicts
+INPUT:
+- str_dict::Dict{Int64, UInt64} -> the dict already parsed with JSON
+- nproc::Int -> the number of processes to loop over
+- tag::Int the communication tag to use
+- comm -> communication world
+"""
+function master_json2intdict(str_dict, nproc, tag, comm)
+	k = collect(keys(str_dict))
+	keys_num = length(k)
+	@info "num keys $keys_num"
+	jump = cld(keys_num, nproc - 1)
+	global current_start = Int32(0)
+	for dst in 1:(nproc-1) # loops over the processors to deal the task
+		@info "curr proc: $dst"
+		start = current_start + 1
+		global current_start += jump
+		finish = current_start
+		if finish > keys_num
+			finish = keys_num
+		end # if finish > keys_num
+
+		@info "start: $start ; finish: $finish"
+		vec2send = [start, finish]
+		MPI.send(vec2send, dst, tag + dst, comm)
+	end # for dst in 1:(nproc-1)
+	d = Dict{Int, UInt}()
+	for i in 1:(nproc-1)
+		rec_d = rec_large_data(MPI.ANY_SOURCE, tag, comm)
+		rec_d = MPI.deserialize(rec_d)
+		mergewith!(+, d, rec_d)
+	end # for i in 1:(nproc-1)
+	keys_num_int = length(collect(keys(d)))
+	if keys_num_int != keys_num
+		@error "the number of int keys is different from the number of str keys"
+	end # if keys_num_int != keys_num
+	return d
+end
+
+"""
+workers_json2intdict
+Each worker receives a different subset of keys and then merges the converted parital dicts
+INPUT:
+- str_dict::Dict{Int64, UInt64} -> the dict already parsed with JSON
+- rank::Int -> the rank of the worker
+- root::Int -> the rank of the master
+- tag::Int the communication tag to use
+- comm -> communication world
+"""
+
+function workers_json2intdict(str_dict, rank, root, tag, comm)
+	k = collect(keys(str_dict))
+	keys_margins, status = MPI.recv(root, tag + rank, comm)
+	@info "rank $rank : received margins $keys_margins"
+	curr_keys = k[keys_margins[1]:keys_margins[2]]
+	partial_d = partial_json2intdict(str_dict, curr_keys)
+	partial_d = MPI.serialize(partial_d)
+	send_large_data(partial_d, root, tag, comm)
+end
 
 end # module SIP_package
