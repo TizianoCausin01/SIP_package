@@ -1596,7 +1596,7 @@ INPUT:
 - comm::MPI.comm -> the communication graph
 
 OUTPUT
-- tot_jsd::Float32 -> the total jsd returned
+- tot_jsd::Float32 -> the total jsd returned	
 """
 function jsd_master(d1, d2, rank, nproc, comm)
 	global tot_jsd = 0
@@ -1622,11 +1622,11 @@ function jsd_master(d1, d2, rank, nproc, comm)
 
 		@info "start: $start ; finish: $finish"
 		curr_keys = k[start:finish]
-
 		global tot += length(curr_keys)
-		subset_d1 = Dict(key => get!(d1, key, 0) for key in curr_keys)
+		set_keys = Set(curr_keys)
+		subset_d1 = filter(d1 -> d1[1] in set_keys, d1)
 		subset_d1 = MPI.serialize(subset_d1)
-		subset_d2 = Dict(key => get!(d2, key, 0) for key in curr_keys)
+		subset_d2 = filter(d2 -> d2[1] in set_keys, d2)
 		subset_d2 = MPI.serialize(subset_d2)
 		send_large_data(subset_d1, dst, dst + 32, comm)
 		send_large_data(subset_d2, dst, dst + 32, comm)
