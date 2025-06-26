@@ -1557,19 +1557,16 @@ function send_large_data(data, dst, tag, comm)
 	onsets = collect(0:2000000000:size_data)
 	status = MPI.send(UInt32(length(onsets)), dst, tag, comm)
 	append!(onsets, size_data)
-	@info "$(Dates.format(now(), "HH:MM:SS")) onsets $(onsets)"
 	count = 0
 	for ichunk in 1:length(onsets)-1
 		chunk = data[onsets[ichunk]+1:onsets[ichunk+1]]
 		count += 1
 		status = MPI.send(chunk, dst, tag + count, comm)
-		@info "$(Dates.format(now(), "HH:MM:SS")) sent chunk from $(onsets[ichunk]) to $(onsets[ichunk+1])"
 	end # for ichunk in 1:length(onsets)-1
-	@info "$(Dates.format(now(), "HH:MM:SS")) things sent: $(count)"
 end #EOF
+
 function rec_large_data(src, tag, comm)
 	len_onsets, status = MPI.recv(src, tag, comm)
-	@info "$(Dates.format(now(), "HH:MM:SS")) len_onsets $(len_onsets)"
 	if len_onsets == 1
 		tot_steps = 1
 	else
@@ -1581,10 +1578,7 @@ function rec_large_data(src, tag, comm)
 		count += 1
 		chunk, status = MPI.recv(src, tag + count, comm)
 		append!(data_rec, chunk)
-		@info "$(Dates.format(now(), "HH:MM:SS")) received chunk of size $(length(chunk))"
-		@info "$(Dates.format(now(), "HH:MM:SS")) size current data_rec: $(length(data_rec))"
 	end # for ichunk in 1:length_onsets-1
-	@info "$(Dates.format(now(), "HH:MM:SS")) things received: $(count)"
 	return data_rec
 end #EOF
 
