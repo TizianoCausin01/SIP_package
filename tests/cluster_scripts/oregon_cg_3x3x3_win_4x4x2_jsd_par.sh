@@ -1,8 +1,8 @@
 #!/bin/bash
 
 #SBATCH --nodes=1
-#SBATCH --time=15:00:00
-#SBATCH --ntasks=1 # number of processes
+#SBATCH --time=24:00:00
+#SBATCH --ntasks=10 # number of processes
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=480G
 #SBATCH --account=Sis25_piasini       # account name
@@ -20,4 +20,4 @@ win1=4
 win2=4
 win3=2
 module load openmpi
-time julia /leonardo/home/userexternal/tcausin0/SIP_package/tests/cluster_scripts/cluster_jsd_par.jl $fn $cg1 $cg2 $cg3 $win1 $win2 $win3
+time mpiexec --bind-to core --map-by core -np $SLURM_NTASKS stdbuf -o0 -e0 julia /leonardo/home/userexternal/tcausin0/SIP_package/tests/cluster_scripts/cluster_jsd_par.jl $fn $cg1 $cg2 $cg3 $win1 $win2 $win3

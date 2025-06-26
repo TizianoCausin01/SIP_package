@@ -906,9 +906,10 @@ Output:
 """
 function counts2prob(counts_dict, approx::Int)
 	vals_counts_dict = values(counts_dict) # extracts the values of the counts_dict
-	tot_counts = sum(vals_counts_dict) # derives the normalizing factor
+	keys_counts_dict = keys(counts_dict)
+        tot_counts = sum(vals_counts_dict) # derives the normalizing factor
 	vals_prob_dict = round.(vals_counts_dict ./ tot_counts, digits = approx) # derives the values of the new dict 
-	prob_dict = Dict(zip(keys(counts_dict), vals_prob_dict)) # creates a new dict with probabilities as values
+	prob_dict = Dict(zip(keys_counts_dict, vals_prob_dict)) # creates a new dict with probabilities as values
 	return prob_dict
 end # EOF
 
@@ -1753,6 +1754,7 @@ function workers_json2intdict(str_dict, rank, root, tag, comm)
 	partial_d = partial_json2intdict(str_dict, curr_keys)
 	partial_d = MPI.serialize(partial_d)
 	send_large_data(partial_d, root, tag, comm)
+	parital_d = nothing
 end
 
 end # module SIP_package
