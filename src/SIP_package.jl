@@ -42,7 +42,9 @@ export wrapper_sampling,
 	jsd_workers,
 	jsd_master,
 	master_json2intdict,
-	workers_json2intdict
+	workers_json2intdict,
+        local_scrambling,
+        block_scrambling
 
 # =========================
 # IMPORTED PACKAGES
@@ -56,7 +58,8 @@ using Images,
 	LinearAlgebra,
 	MPI,
 	CodecZlib,
-	Dates
+	Dates,
+        Random
 
 #include("./SBitSet.jl")
 
@@ -891,9 +894,42 @@ function load_intdict_surroundings(path2dict::String, surr_dims::Tuple{Integer, 
 	return dict_surr
 end #EOF
 # =========================
-# PHYSICAL QUANTITIES    
+# SCRAMBLING 
 # =========================
 
+
+function local_scrambling(vid, range_scr, stride_glider)
+    vid_loc_scr = copy(vid)
+    num_steps = fld(size(vid)[3], stride_glider)
+	global counter = 0  
+	for i in 1:num_steps - cld(range_scr , stride_glider)
+		curr_start = stride_glider * counter + 1
+		curr_perm = (curr_start - 1) .+ randperm(range_scr)
+		vid_loc_scr[:, :, curr_start:curr_start+range_scr-1] = vid_loc_scr[:, :, curr_perm]
+		global counter += 1
+	end # for i in 1:num_steps
+	return vid_loc_scr
+end #EOF
+
+
+function block_scrambling(vid, scale_block)
+    vid_block_scr = copy(vid)
+    num_blocks = fld(size(vid)[3], scale_block)
+	scrambled_indices = randperm(num_blocks) 
+	global new_vid = BitArray{3}(undef,size(vid,1), size(vid,2), 0)
+	for i in scrambled_indices
+		start_idx = (i - 1) * scale_block + 1
+        end_idx = i * scale_block
+		curr_block = vid_block_scr[:,:,start_idx:end_idx]
+		global new_vid = cat(new_vid, curr_block, dims=3)
+	end # for i in 1:num_steps
+	return new_vid
+end # EOF
+
+
+# =========================
+# PHYSICAL QUANTITIES    
+# =========================
 """
 counts2prob
 Converts the counts_dict into a probability dict, by normalizing the counts of the patches.
