@@ -1058,8 +1058,7 @@ OUTPUT:
 - avg_dict::Dict{BitVector, Int} -> the average probability distribution
 """
 function avg_PD(dict1, dict2)
-	avg_dict = mergewith(+, dict1, dict2)
-	avg_dict = Dict(key => val / 2.0 for (key, val) in avg_dict)
+	avg_dict = mergewith!((a, b) -> (a + b) / 2.0, dict1, dict2)
 	return avg_dict
 end
 
@@ -1632,8 +1631,8 @@ function jsd_master(d1, d2, rank, nproc, comm)
 
 	end # for dst in 1:(nproc-1)
 
-	for i in 1:(nproc-1)
-		local jsd_part = MPI.recv(comm; source = MPI.ANY_SOURCE, tag = 32)
+	for dst in 1:(nproc-1)
+		local jsd_part = MPI.recv(comm; source = dst, tag = dst)
 		global tot_jsd += jsd_part
 	end # for i in 1:(nproc-1)
 	@info "tot jsd = $tot_jsd"
@@ -1660,7 +1659,7 @@ function jsd_workers(root, rank, comm)
 	d2 = MPI.deserialize(d2)
 	jsd_part = Float32(jsd(d1, d2))
 	@info "jsd_part $jsd_part"
-	MPI.send(jsd_part, Int32(0), 32, comm)
+	MPI.send(jsd_part, Int32(0), rank, comm)
 end # EOF
 
 """
