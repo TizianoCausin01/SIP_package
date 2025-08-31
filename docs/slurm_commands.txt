@@ -1,0 +1,49 @@
+
+# INTERACTIVE SESSION:
+salloc --nodes=1 --gres=gpu:1 --mem=32G --ntasks=1 --cpus-per-task=4 -A Sis24_piasini -p boost_usr_prod --time=01:00:00
+salloc # command to require an interactive session
+--nodes=1 # number of nodes required
+--gres=gpu:1 # generic resources required only if fusing specific resources like GPUs, not needed otherwise
+--mem=32G # RAM to allocate
+--ntasks=1 # num of tasks required
+--cpus-per-task=4 # how many CPUs cores are allocated per task
+-A Sis24_piasini # account onto which to charge the computational resource
+-p boost_usr_prod # partition and queue to use
+--time=01:00:00 # duration of session
+
+other possible flags:
+--mem-per-cpu=<MB> # RAM to allocate to each CPU
+--job-name=<name> - Set job name
+--dependency=<type:job_id> - Job dependency conditions
+--qos=<qos> - Quality of Service
+--reservation=<name> - Use specific reservation
+--priority=<value> - Set job priority
+Output:
+--output=<filename> - Standard output file
+--error=<filename> - Standard error file
+
+
+# NON-INTERACTIVE SESSION
+
+#!/bin/bash
+
+#SBATCH --nodes=1
+#SBATCH --time=?
+#SBATCH --ntasks=? # number of processes
+#SBATCH --cpus-per-task=?
+#SBATCH --mem=?
+#SBATCH --account=Sis24_piasini       # account name
+#SBATCH --partition=boost_usr_prod # partition name
+#SBATCH --job-name=<MY_JOB_NAME>
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=tcausin@sissa.it
+#SBATCH --output=/leonardo/home/userexternal/tcausin/out/%x.%j.out   # file name will be *job_name*.*job_id*
+#SBATCH --error=/leonardo/home/userexternal/tcausin/out/%x.%j.err    # file name will be *job_name*.*job_id*
+
+mpiexec -np <num_of_processes> time julia <path2script> # e.g. mpiexec -np 10 time julia /home/tcausin/SIP_package/tests/server_master_worker_pattern_test.jl
+
+
+# to see why a job was aborted
+
+sacct -j 12985227 --format=JobID,JobName,MaxRSS,Elapsed,State,ExitCode
+

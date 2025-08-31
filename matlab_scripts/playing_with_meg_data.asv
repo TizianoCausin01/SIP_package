@@ -54,35 +54,6 @@ ylabel('log Amplitude');
 title('Spectrum of Neural Signal');
 grid on;
 %%
-% Load the neural signal (example signal)
-fs = 50; % Sampling frequency in Hz
-t = 0:1/fs:1-1/fs; % Time vector (1 second duration)
-neural_signal = target_sensor; % Replace with your signal
-
-% Compute the FFT
-N = length(neural_signal); % Length of the signal
-Y = fft(neural_signal); % Perform FFT
-Y = Y(1:floor(N/2)+1); % Take the positive half of the spectrum
-
-% Compute the magnitude of the FFT
-amplitude = abs(Y) / N; % Normalize amplitude
-amplitude(2:end-1) = 2 * amplitude(2:end-1); % Scale non-DC components
-
-% Compute the frequency axis
-frequencies = (0:floor(N/2)) * (fs / N); % Frequency vector
-
-% Convert to log scale for better visualization (optional)
-log_frequencies = log10(frequencies + eps); % Avoid log(0)
-log_amplitude = log10(amplitude + eps); % Avoid log(0)
-
-% Plot the spectrum
-figure;
-plot(log_frequencies, log_amplitude);
-xlabel('log Frequency (Hz)');
-ylabel('log Amplitude');
-title('Spectrum of Neural Signal');
-grid on;
-%%
 % https://it.mathworks.com/discovery/fft.html#live-editor-example-1
 
 Fs = 50;

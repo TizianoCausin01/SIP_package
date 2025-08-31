@@ -35,11 +35,9 @@ function jsd_master(d1, d2, rank, nproc, comm)
 		curr_keys = k[start:finish]
 
 		global tot += length(curr_keys)
-		subset_d1 = Dict(key => get!(d1, key, 0) for key in curr_keys)
-		subset_d1 = MPI.serialize(subset_d1)
-		subset_d2 = Dict(key => get!(d1, key, 0) for key in curr_keys)
+
 		subset_d2 = MPI.serialize(subset_d2)
-		SIP_package.send_large_data(subset_d1, dst, dst + 32, comm)
+		SIP_package.send_large_data(curr_keys, dst, dst + 32, comm)
 		SIP_package.send_large_data(subset_d2, dst, dst + 32, comm)
 
 	end # for dst in 1:(nproc-1)
@@ -55,11 +53,12 @@ function jsd_master(d1, d2, rank, nproc, comm)
 end #EOF
 
 
-function jsd_workers(root, rank, comm)
-	d1 = SIP_package.rec_large_data(0, rank + 32, comm)
-	d1 = MPI.deserialize(d1)
-	d2 = SIP_package.rec_large_data(0, rank + 32, comm)
-	d2 = MPI.deserialize(d2)
+function jsd_workers(d1, d2, root, rank, comm)
+
+	curr_keys = SIP_package.rec_large_data(0, rank + 32, comm)
+	curr_keys = MPI.deserialize(curr_keys)
+	subset_d1 = Dict(key => get!(d1, key, 0) for key in curr_keys)
+	subset_d2 = Dict(key => get!(d1, key, 0) for key in curr_keys)
 	jsd_part = Float32(jsd(d1, d2))
 	@info "jsd_part $jsd_part"
 	MPI.send(jsd_part, Int32(0), 32, comm)

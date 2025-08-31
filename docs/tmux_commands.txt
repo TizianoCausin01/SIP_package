@@ -1,0 +1,52 @@
+	Here are the key things to know about using tmux (terminal multiplexer):
+Basic commands:
+
+Start new session: tmux
+Start named session: tmux new -s mysession
+List sessions: tmux ls
+Attach to last session: tmux a
+Attach to specific session: tmux a -t mysession
+Kill session: tmux kill-session -t mysession
+
+Inside tmux, all commands start with a prefix (default is Ctrl+b). Common operations:
+Window management:
+
+Create new window: prefix + c
+Switch to next window: prefix + n
+Switch to previous window: prefix + p
+List windows: prefix + w
+Rename window: prefix + ,
+
+Pane management:
+
+Split horizontally: prefix + "
+Split vertically: prefix + %
+Move between panes: prefix + arrow keys
+Close current pane: prefix + x
+Toggle pane zoom: prefix + z
+
+Session control:
+
+Detach from session: prefix + d
+List sessions: prefix + s
+Rename session: prefix + $
+
+Type exit or press Ctrl+d to close the current window
+Use Ctrl+b & to force close the current window (it will ask for confirmation)
+
+
+If you want to close a specific window from a numbered list:
+
+
+Ctrl+b then w #to see list of windows
+Navigate to the window you want to close
+Press x to kill it
+
+
+To close an entire session:
+
+
+Exit all windows in the session
+Or from outside tmux: tmux kill-session -t session_name
+Or from inside: Ctrl+b then : then type kill-session
+tmux kill-server

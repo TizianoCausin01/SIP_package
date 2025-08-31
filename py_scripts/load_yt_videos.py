@@ -37,8 +37,8 @@ class cfg:
     path2data: str = (
         "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/data_repo/SIP_data/"
     )
-    file_name: str = "test_venice.mp4"
-    url: str = "https://youtube.com/shorts/ZcKNP5MGnnY?si=blcRxg3Wkp47F1nG"
+    file_name: str = "test_venice_long.mp4"
+    url: str = "https://youtube.com/shorts/ZcKNP5MGnnY?si=DIuxx6iJxlf2DdVF" 
 
 
 # %%

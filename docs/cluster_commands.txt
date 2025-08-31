@@ -1,0 +1,57 @@
+
+
+
+# to obtain the 2FA code (12h duration)
+step ssh login 'tcausin@sissa.it' --provisioner cineca-hpc
+
+# to remove old keys (once it gives the REMOTE HOST IDENTIFICATION error
+ssh-keygen -R login.leonardo.cineca.it
+
+# how to access to the clusters
+ssh tcausin0@login.marconi.cineca.it
+ssh tcausin0@login.g100.cineca.it
+ssh tcausin0@login.leonardo.cineca.it
+
+# to do the scp
+scp -r src tcausin0@login.leonardo.cineca.it:/leonardo/home/userexternal/tcausin0
+
+# to use the server to send the videos
+ssh -L 10000:127.0.0.1:10000 tcausin@doslis.cns.sissa.it  # as is the remote port of the server was running in my local machine
+ssh-keygen -f "/home/tcausin/.ssh/known_hosts" -R "login.leonardo.cineca.it"
+eval $(ssh-agent)
+scp data/SIP_data/<FILE_NAME>.mp4 tcausin0@login.leonardo.cineca.it:/leonardo_scratch/fast/Sis25_piasini/tcausin/SIP_data
+
+# TO LOAD FFMPEG
+# First, clean up the previous attempt
+cd ~/bin
+rm ffmpeg  # Remove the incorrectly downloaded file
+
+# Download with the correct filename
+curl -o ~/bin/ffmpeg-git-static.tar.xz https://johnvansickle.com/ffmpeg/builds/ffmpeg-git-amd64-static.tar.xz
+
+# Extract it
+tar xf ffmpeg-git-static.tar.xz
+
+# The extracted directory name might be different, let's check what it is
+ls -la
+
+# After you see the correct directory name, we can move the files
+# Replace ffmpeg-git-XXXXXXXX-amd64-static with the actual directory name you see
+mv ffmpeg-git-*/ffmpeg .
+mv ffmpeg-git-*/ffprobe .
+
+# Make executable
+chmod +x ffmpeg ffprobe
+
+for fn in "${files[@]}"; do
+mkdir -p ${fn}_counts_cg_3x3x3_win_4x4x2/loc_max_${fn}
+ssh-keygen -R login.leonardo.cineca.it
+scp -r tcausin0@login.leonardo.cineca.it:/leonardo_work/Sis25_piasini/tcausin/SIP_results/${fn}_counts_cg_3x3x3_win_4x4x2/loc_max_${fn} ${fn}_counts_cg_3x3x3_win_4x4x2
+done
+
+
+for fn in "${files[@]}"; do
+mkdir -p ${fn}_counts_cg_${cg1}x${cg2}x${cg3}_win_${win1}x${win2}x${win3}/loc_max_${fn}
+ssh-keygen -R login.leonardo.cineca.it
+scp tcausin0@login.leonardo.cineca.it:/leonardo_work/Sis25_piasini/tcausin/SIP_results/${fn}_counts_cg_${cg1}x${cg2}x${cg3}_win_${win1}x${win2}x${win3}/jsd_${fn}.csv ${fn}_counts_cg_${cg1}x${cg2}x${cg3}_win_${win1}x${win2}x${win3};ssh-keygen -R login.leonardo.cineca.it;
+scp tcausin0@login.leonardo.cineca.it:/leonardo_work/Sis25_piasini/tcausin/SIP_results/${fn}_counts_cg_${cg1}x${cg2}x${cg3}_win_${win1}x${win2}x${win3}/sh_entropy_${fn}.csv ${fn}_counts_cg_${cg1}x${cg2}x${cg3}_win_${win1}x${win2}x${win3}; done

@@ -47,7 +47,7 @@ end
 
 # ╔═╡ 280c5054-64af-4f1e-8e71-6fa81b7dc879
 begin
-range_scr = 5; stride = 3
+range_scr = 10; stride = 3
 vid_ls = local_scrambling(vid, range_scr, stride);
 end
 

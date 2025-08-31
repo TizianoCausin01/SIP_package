@@ -1,0 +1,50 @@
+
+test_valtellina (2:12)
+
+early parallelization
+
+-np 4 -> 6:28
+-np 5 -> 5:37
+-np 6 -> 4:34
+-np 7 -> 4:07
+-np 8 -> 3:37
+-np 9 -> 3:27
+
+
+
+10mins (10') - before 25/01/2025
+
+early parallelization
+
+-np 2 -> 1:02:39
+-np 3 -> 37:57
+-np 4 -> 28:12
+-np 5 -> 24:23
+-np 6 -> 21:46
+-np 7 -> 16:42
+-np 8 -> 15:14
+
+
+master-workers pattern
+
+-np 3 -> 1:50:23
+-np 4 -> 56:00
+-np 5 -> 43:56
+-np 6 -> 34:07
+-np 7 -> 24:41
+-np 8 -> 24:30
+-np 9 -> 24:29
+
+
+
+ukraine (30') - 25/01/2025
+master-workers pattern
+
+-np 3 -> 25:01:53
+-np 4 -> 12:59:14
+-np 5 -> 8:48:03 
+-np 6 -> 6:57:09
+-np 7 -> 5:41:57
+-np 8 -> 4:21:26
+-np 9 -> 4:21:26
+-np 10 -> 3:38:43

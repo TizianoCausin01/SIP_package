@@ -1,0 +1,58 @@
+#using Pkg
+cd("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_code/")
+Pkg.activate("SIP")
+
+##
+using FFTW, Images, Plots
+##
+# Load or create a grayscale image (example: random image)
+# Load or create a grayscale image (example: random image)
+img_path = "/Users/tizianocausin/Desktop/foto_sbg.jpeg"
+img_RGB = load(img_path)
+img = Gray.(img_RGB)  # Replace with your image, e.g., load("image.png")
+
+# Step 1: Extract the numerical matrix from the image
+img_data = channelview(img)
+
+# Step 2: Compute the 2D FFT
+fft_img = fftshift(fft(img_data))
+
+# Step 3: Compute the Power Spectrum
+power_spectrum = abs.(fft_img).^2
+
+# Step 4: Plot the Power Spectrum (log scale for better visualization)
+Plots.heatmap(log1p.(power_spectrum), color=:viridis, axis=false, title="Spatial Power Spectrum")
+##
+num_img = channelview(img)
+fft_img = fftshift(fft(num_img))
+
+# Compute the magnitude spectrum
+magnitude_spectrum = abs.(fft_img)
+
+# Get the size of the image
+rows, cols = size(img)
+
+# Compute radial distances
+cx, cy = div(rows, 2) + 1, div(cols, 2) + 1  # Add +1 for valid indexing
+x = collect(1:rows) .- cx
+y = collect(1:cols) .- cy
+radius = sqrt.((x .^ 2)' .+ y .^ 2)  # Radial distance matrix  # Radial distance matrix
+
+# Bin the FFT magnitudes based on radial distance
+bins = ceil(Int, maximum(radius))
+radial_sum = zeros(bins)
+radial_count = zeros(bins)
+
+for i in 1:rows
+    for j in 1:cols
+        r = Int(round(radius[i, j]))  # Get the radial bin
+        radial_sum[r] += magnitude_spectrum[i, j]
+        radial_count[r] += 1
+    end
+end
+
+# Compute the radial average
+radial_average = radial_sum ./ radial_count
+
+# Plot the radial spectrum
+Plots.plot(1:bins, radial_average, xlabel="Radial Frequency", ylabel="Magnitude", title="Radial Power Spectrum")

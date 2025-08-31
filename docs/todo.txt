@@ -1,0 +1,5 @@
+- loc_max hamming dist 2 o+
+- match n of samples btw iter1s e see behaviro
+- comparisons btw environments
+- do plots on cluster
+- do +big loc max

@@ -13,7 +13,7 @@ def download_video_only(url, output_path=".", resolution=1080, fps=30):
     # dict with parameters to download the video
     ydl_opts = {
         # Select video-only streams, I could select lower resolutions by doing: "format": "bestvideo[quality=3][ext=mp4]"
-        "format": f"bestvideo[height<={resolution}][fps<={fps}][ext=mp4]",
+        "format": f"bestvideo[height<={resolution}][fps<={fps}][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]",
         # Output template (can customize filename)
         "outtmpl": output_path,
         # Optional: Limit to specific resolutions if desired
@@ -36,9 +36,9 @@ def download_video_only(url, output_path=".", resolution=1080, fps=30):
 path2data = (
     "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/data_repo/SIP_data"
 )
-file_name = "short_4k"
+file_name = "vid_bolt"
 download_video_only(
-    "https://youtu.be/TxbE79-1OSI?si=dQqiogoeI893O0ly",
+    "https://youtu.be/HFLuduKmnW0?si=e6AsxtHS3gMiD48n",
     f"{path2data}/{file_name}.mp4",
 )
 # %%

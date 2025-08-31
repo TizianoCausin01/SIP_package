@@ -1,0 +1,118 @@
+COMMANDS FOR USING MPI
+MPI.Init()   # creates variables for initialising the program, among which MPI.COMM_WORLD , hence forth called "comm"  
+MPI.Comm_rank(comm) # to establish a rank among processes
+MPI.Comm_size(comm) # num of proc in w
+
+COMMUNICATIONS
+# send/receive blocking communications, the corresponding unblocking ones are called .isend and .irecv
+MPI.send(message, destination, tag, MPI.communicator) 
+MPI.recv(src, tag, MPI.communicator) # both pass only C types but there are ways to serialize and deserialize other objects automatically
+MPI.Recv(") # e.g. for non-C object types
+
+mex_len = MPI.Allgather(length(mex), MPI.communicator) # bc different messages have different lengths and for preallocation
+MPI.Gatherv(mex, mex_len, root, MPI.communicator) # all-to-one communication. Root is a var prespecified at the beginning of script (=0)
+
+bcast(mex, root, MPI.communicator) # one-to-all communication 
+
+
+RUNNING ON TERMINAL
+mpirun -np <num_of_processes> julia script.jl # you can substitute mpirun with mpiexec
+
+TO DISTRIBUTE DATA/FILES
+myfiles = file_names[rank+1:procs_num:length(file_names)] # cyclic distribution (like dealing cards) -> each process has a different rank so it will be assigned different files
+
+TO DE/SERIALIZE DATA (when this isn't already done)
+MPI.serialize(data)
+MPI.deserialize(serialized_data)
+
+TO SUBMIT SCRIPT (submit.sh)
+#!/bin/bash
+
+# Slurm sbatch options
+#SBATCH -o output.log
+#SBATCH -n num_of_processors
+
+# Initialization and loading modules
+Source /etc/profile
+module load julia # loads the needed partitions
+module load mpi 
+
+# command line call
+mpirun julia script_name.jl # don't need to specify -np bc are already in the script
+
+# end of the script
+% sbatch submit.sh
+
+
+FOR SETTING IT UP IN JULIA:
+using MPIPreferences # to set in the current or across sections
+MPIPreferences.use_system_binary(library_names=["libmpi", "libmpich"], extra_paths=["/opt/homebrew/lib"]) # use libs installed by sys, lib_names e extra_paths to find them
+Or...
+Using MPI; MPI.install_mpiexecjl()
+
+COLLECTIVE COMMUNICATIONS
+- SCATTER
+
+Scatter
+send_buf = nothing # what you will send, set to nothing bc you have to initially set it in each process. Then modify the ones that you want by saying something like: if rank == 0; *variable assignation*; end
+recv_buf = MPI.Scatter(send_buf, type, comm; root) # send_buf will be split evenly across the processes. type is the type of element we expect to receive.
+   
+Scatter!
+send_buf = nothing
+recv_buf = Vector{Float64}(undef, size) # this is just an example
+if rank == 0; *variable assignation*; end
+MPI.Scatter!(send_buf, recv_buf, comm; root) # what will be sent will be automatically mapped onto the variable recv_buf (send_buf is scattered columns first)
+
+Scatterv! # to send arrays of non-uniform (variable) sizes
+send_buf = nothing
+if rank == 0; *assignation*; else; *assignation*; end
+lengths = [length1, length2, etc...] # how long the different messages should be
+offset = [offset1, offset2, etc...] # when the different messages should start
+MPI.Scatterv!(VBuffer(send_buf, lengths, offsets, type), recv_buf, comm; root=0) # VBuffer has to be constructed, "type" for example could be MPI.DOUBLE. Again the order of indexing is columns first
+
+- GATHER
+
+Gather
+recv_buf = MPI.Gather(send_buf, comm; root=0)
+
+Gather! # to rec into a prespecified recv_buf 
+Gatherv! # to rec non-uniform entries 
+Allgather/Allgather!/Allgatherv! # each rank will have all results
+
+- BROADCAST
+
+recv_buf = MPI.bcast(send_buf, comm; root)
+
+MPI.Bcast!(send_buf, recv_buf, comm; root)
+
+- REDUCE
+
+recv_buf = MPI.Reduce(send_buf, +, comm; root) # element-wise summation, but you could define other operations for specific types as well
+
+Reduce! # reduced version saved in a preallocated recv_buf 
+Allreduce/Allreduce! # operation done in all processors
+
+
+POINT-TO-POINT COMMUNICATIONS
+
+- Send/Recv
+MPI.send(send_buf, comm; dest=1) # dest=1 is just an example
+data = MPI.recv(comm; source=(rank-1))
+
+- Send/Recv!
+MPI.send(send_buf, comm; dest=1) # dest=1 is just an example
+MPI.recv!(recv_buf, comm; source=(rank-1))
+
+- Isend/Irecv! # non-blocking operations
+send_status = MPI,Isend(send_buf, comm; dest=1)
+recv_status = MPI.Irecv!(recv_buf, comm; source=0) 
+stats = MPI.Waitall!([send_status, recv_status]) # waits until all operations have been done
+
+
+
+
+
+
+
+
+
