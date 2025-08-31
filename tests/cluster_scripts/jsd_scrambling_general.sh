@@ -19,5 +19,6 @@ cg3=${4}
 win1=${5}
 win2=${6}
 win3=${7}
+scrambling_cond=${8}
 module load openmpi
-time mpiexec --bind-to core --map-by node -np $SLURM_NTASKS stdbuf -o0 -e0 julia /leonardo/home/userexternal/tcausin0/SIP_package/tests/cluster_scripts/cluster_jsd_par.jl $fn $cg1 $cg2 $cg3 $win1 $win2 $win3
+time mpiexec --bind-to core --map-by node -np $SLURM_NTASKS stdbuf -o0 -e0 julia /leonardo/home/userexternal/tcausin0/SIP_package/tests/cluster_scripts/cluster_jsd_scrambling.jl $fn $cg1 $cg2 $cg3 $win1 $win2 $win3 $scrambling_cond $9 ${10}
