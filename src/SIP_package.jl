@@ -1094,7 +1094,7 @@ OUTPUT:
 - avg_dict::Dict{BitVector, Int} -> the average probability distribution
 """
 function avg_PD(dict1, dict2)
-	avg_dict = mergewith!((a, b) -> (a + b) / 2.0, dict1, dict2)
+	avg_dict = mergewith((a, b) -> (a + b) / 2.0, dict1, dict2)
 	return avg_dict
 end
 
@@ -1133,8 +1133,8 @@ function jsd(dict1, dict2; eps = 1e-10)
 	jsd = 0
 	avg_dict = avg_PD(dict1, dict2)
 	for key in keys(avg_dict)
-		val1 = get!(dict1, key, 0)
-		val2 = get!(dict2, key, 0)
+		val1 = get(dict1, key, 0)
+		val2 = get(dict2, key, 0)
 		avg_val = max(avg_dict[key], eps) # max ensures that we don't get avg_val = 0 thus causing NaN
 		jsd += 1 / 2 * (sing_kld(val1, avg_val) + sing_kld(val2, avg_val))
 	end # key in keys(avg_PD)
@@ -1735,6 +1735,7 @@ INPUT:
 function master_json2intdict(str_dict, nproc, tag, comm)
 	k = collect(keys(str_dict))
 	keys_num = length(k)
+    sum_counts = sum(values(str_dict))
 	@info "num keys $keys_num"
 	jump = cld(keys_num, nproc - 1)
 	global current_start = Int32(0)
@@ -1761,6 +1762,9 @@ function master_json2intdict(str_dict, nproc, tag, comm)
 	if keys_num_int != keys_num
 		@error "the number of int keys is different from the number of str keys"
 	end # if keys_num_int != keys_num
+    if sum_counts != sum(values(d))
+        @error "the sum of the counts doesn't coincide"
+    end
 	return d
 end
 
