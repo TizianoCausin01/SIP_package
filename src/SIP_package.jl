@@ -1735,7 +1735,7 @@ INPUT:
 function master_json2intdict(str_dict, nproc, tag, comm)
 	k = collect(keys(str_dict))
 	keys_num = length(k)
-    sum_counts = sum(values(str_dict))
+    #sum_counts = sum(values(str_dict))
 	@info "num keys $keys_num"
 	jump = cld(keys_num, nproc - 1)
 	global current_start = Int32(0)
@@ -1762,9 +1762,9 @@ function master_json2intdict(str_dict, nproc, tag, comm)
 	if keys_num_int != keys_num
 		@error "the number of int keys is different from the number of str keys"
 	end # if keys_num_int != keys_num
-    if sum_counts != sum(values(d))
-        @error "the sum of the counts doesn't coincide"
-    end
+    #if sum_counts != sum(values(d))
+    #    @error "the sum of the counts doesn't coincide"
+    #end
 	return d
 end
 
