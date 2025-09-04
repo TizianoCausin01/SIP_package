@@ -44,8 +44,9 @@ export wrapper_sampling,
 	master_json2intdict,
 	workers_json2intdict,
         local_scrambling,
-        block_scrambling
-
+        block_scrambling,
+    plot_jsd_mat,
+    get_avg_mat
 # =========================
 # IMPORTED PACKAGES
 # =========================
@@ -59,7 +60,9 @@ using Images,
 	MPI,
 	CodecZlib,
 	Dates,
-        Random
+    Random,
+    Plots,
+    DelimitedFiles
 
 #include("./SBitSet.jl")
 
@@ -1790,4 +1793,78 @@ function workers_json2intdict(str_dict, rank, root, tag, comm)
 	parital_d = nothing
 end
 
+
+
+# =========================
+# FOR FIGURES
+# =========================
+
+function plot_jsd_mat(jsd_mat; std_mat = Nothing, title_text="", square_size=600, fontsize=8)
+	default(background_color = :white)
+	#div_mat_path = "$(counts_path)/jsd_$(file_name).csv"
+	my_yellow_red_gradient = reverse(cgrad([
+			RGB(0.9, 1.0, 0.0),  # bright yellow
+			RGB(0.9, 0.1, 0.0),  # orange-red
+			RGB(1, 0.0, 0.0),   # dark red / maroon
+		], [0.0, 0.2, 0.6, 1.0]))  # control the position of colors
+
+	jsd_mat = jsd_mat + jsd_mat' # making it symmetric
+	hm = heatmap(
+		jsd_mat,
+		color = reverse(my_yellow_red_gradient),
+		clim = (0 - 0.01, .5),
+		yflip = true,
+		title = title_text,
+		
+		legend = false,
+		ytick = (1:5, 0:4),
+		xticks = (1:5, 0:4),
+		background_color = :white,
+    size = (square_size, square_size), # make figure square
+    #foreground_color_subplot = :white, # axes background   
+	background_color_subplot = :white, # axes background   
+	titlecolor=:black,
+    aspect_ratio=1,
+	framestyle = :grid
+	)
+	# overlay black borders around each cell
+
+	if std_mat == Nothing
+		for i in 1:size(jsd_mat, 1), j in 1:size(jsd_mat, 2)
+			annotate!(j, i, text("$(round(jsd_mat[i, j]; digits = 3))", fontsize, :black))
+		end
+	else
+		std_mat = std_mat + std_mat'
+		for i in 1:size(jsd_mat, 1), j in 1:size(jsd_mat, 2)
+			annotate!(j, i, text("$(round(jsd_mat[i, j]; digits = 3)) ± $(round(std_mat[i,j]; digits = 3))", fontsize, :black))
+		end #for i in 1:size(jsd_mat, 1), j in 1:size(jsd_mat, 2)
+	end # if std_mat == Nothing
+	return hm
+end # EOF
+
+function get_avg_mat(results_path, cg_dims, win_dims; file_names = 0, scrambling_condition = Nothing, range = Nothing, stride = Nothing, scale = Nothing)
+	if file_names == 0
+		file_names = ["oregon", "bryce_canyon", "snow_walk", "idaho", "cenote_caves", "hawaii", "emerald_lake"]
+	end #if file_names==0 
+	tot_jsds = Array{Float64}(undef, 5, 5, 7)
+	counter = 0
+	if scrambling_condition != Nothing
+		results_path = "$(results_path)/$(scrambling_condition)_scrambling"
+	end
+	for fn in file_names
+		counter += 1
+		if scrambling_condition == Nothing
+			file_path = "$(results_path)/$(fn)_counts_cg_$(cg_dims[1])x$(cg_dims[2])x$(cg_dims[3])_win_$(win_dims[1])x$(win_dims[2])x$(win_dims[3])/jsd_$(fn).csv"
+		elseif scrambling_condition == "local"
+			file_path = "$(results_path)/$(fn)_counts_cg_$(cg_dims[1])x$(cg_dims[2])x$(cg_dims[3])_win_$(win_dims[1])x$(win_dims[2])x$(win_dims[3])_range_$(range)_stride_$(stride)/jsd_$(fn).csv"
+		elseif scrambling_condition == "block"
+			file_path = "$(results_path)/$(fn)_counts_cg_$(cg_dims[1])x$(cg_dims[2])x$(cg_dims[3])_win_$(win_dims[1])x$(win_dims[2])x$(win_dims[3])_scale_$(scale)/jsd_$(fn).csv"
+		end #if scrambling_condition == Nothing
+		jsd_mat = readdlm(file_path, ',')
+		tot_jsds[:, :, counter] = jsd_mat
+	end
+	avg_tot = dropdims(mean(tot_jsds, dims = 3), dims = 3);
+	std_tot = dropdims(std(tot_jsds, dims = 3), dims = 3);
+	return avg_tot, std_tot
+end
 end # module SIP_package
