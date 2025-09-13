@@ -30,6 +30,7 @@ begin
 	using PlutoUI
 	using Plots
 	using DelimitedFiles
+	using Measures
 end
 
 # ╔═╡ aa232ab8-4b24-45a7-89f0-7e07c6219c45
@@ -37,8 +38,8 @@ begin
     results_path = "/Users/tizianocausin/OneDrive - SISSA/data_repo/SIP_results"
 	img_path = "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/figures_SIP"
 	file_name = "snow_walk"
-	cg_dims = (3,3,3)
-	win_dims = (3,3,3)
+	cg_dims = (3,3,1)
+	win_dims = (3,3,1)
 	iterations_num = 5
 end
 
@@ -47,13 +48,26 @@ begin
 counts_path = "$(results_path)/$(file_name)_counts_cg_$(cg_dims[1])x$(cg_dims[2])x$(cg_dims[3])_win_$(win_dims[1])x$(win_dims[2])x$(win_dims[3])"
 	
 loc_max_path = "$(counts_path)/loc_max_$(file_name)"
-	ham_dist = 2
-	percentile = 40
+end
+	
+	
+
+# ╔═╡ e4cf5473-5fec-4bdb-8bc1-fd1953615965
+function int2win(key, win_dims)
+	str_key = bitstring(key)
+	tot_bits = prod(win_dims)
+	str_key = str_key[end-tot_bits+1:end]
+	bit_vec_key = BitVector(c == '1' for c in str_key)
+	win = reshape(bit_vec_key, win_dims)
+	return win
+end # EOF
+
+# ╔═╡ 01cd98b5-8b79-417c-9cb5-bb500b590f03
+begin
+	ham_dist = 1
+	percentile = 100
 	loc_max_ham_path =  "$(counts_path)/loc_max_ham_$(ham_dist)_$(file_name)_$(percentile)percent"
 end
-
-# ╔═╡ b128117d-a7c4-4fe5-a49e-56098e6bd042
-loc_max_ham_path
 
 # ╔═╡ 3ea45e23-3379-44af-9d9a-337dd76df947
 md"## iteration number"
@@ -61,11 +75,11 @@ md"## iteration number"
 # ╔═╡ b0e9b208-0f99-458a-8462-44ad580c6d7a
 @bind iter_idx Slider(1:iterations_num, show_value=true, default=1) 
 
-# ╔═╡ e38daff8-18ee-42f3-950b-edb3614366e2
-md"## print top loc max"
-
 # ╔═╡ 7150ef72-c1db-4294-b87a-ab6e46888362
+# ╠═╡ disabled = true
+#=╠═╡
 @bind top_n Slider(1:60, show_value=true, default=1) 
+  ╠═╡ =#
 
 # ╔═╡ d1bd8aab-9f32-4523-8bd3-e2e27e692b8b
 md"## start at"
@@ -73,18 +87,27 @@ md"## start at"
 # ╔═╡ bf8ca8bf-4b66-4e16-a50d-598f54c7f5f6
 begin
     loc_max_iter_path = "$(loc_max_path)/loc_max_$(file_name)_iter$(iter_idx).json"
-    loc_max_dict = json2dict(loc_max_iter_path)
+    loc_max_dict = json2intdict(loc_max_iter_path)
 	sorted_loc_max = sort(collect(loc_max_dict), by = x -> x[2], rev = true)
 end
 
-# ╔═╡ 4cbc0676-e105-43a7-bc8d-0e1fa937978a
-@bind start_at Slider(1:length(loc_max_dict)-top_n, show_value=true, default=1) 
+# ╔═╡ b36b6cdb-794d-4305-8054-07cc0a7c5d1c
+md"## print top loc max"
+
+# ╔═╡ f439e04e-14d9-49e2-bcae-75d7be06f01c
+@bind top_n Slider(1:min(60, length(loc_max_dict)), show_value=true, default=1) 
+
+# ╔═╡ cd18bd81-bcfe-4951-81f1-a963accc2307
+md"## start at"
+
+# ╔═╡ d462f6ca-cb07-499f-9d08-c03e962ad715
+@bind start_at Slider(1:max(length(loc_max_dict)-top_n, 1), show_value=true, default=1) 
 
 # ╔═╡ dbb9eb85-f94a-4d4a-856d-8c2231acf0f5
 begin
 loc_max_list = []
-    for (win, _) in sorted_loc_max[start_at:start_at+top_n-1]
-		target_win = reshape(BitVector(win), win_dims)
+    for (key, _) in sorted_loc_max[start_at:start_at+top_n-1]
+		target_win = int2win(key, win_dims)
 		push!(loc_max_list, Gray.(target_win))
 	end # for key in keys(loc_max_dict)
 end
@@ -96,27 +119,39 @@ md"## loc max hamming distance 1"
 begin
 	theme(:default)
     default(background_color=:lightgray) 
-	anim = @animate for frame_idx in 1 : win_dims[3]
+	
             global plot_list = [plot(
-            heatmap(el[:, :, frame_idx], color=:grays, axis=false, grid=false),  # Base heatmap
+            heatmap(el[:, :, 1], color=:grays, axis=false, grid=false),  # Base heatmap
             ) for el in loc_max_list]  # Enumerate for titles
 		title_plot = plot(title="Overall Title", grid=false, showaxis=false, framestyle=:none)
-            plot(plot_list...)  # Adjust layout as needed
-	end every 1 
-	gif(anim, "$(img_path)/loc_max_$(file_name)_cg_$(cg_dims[1])x$(cg_dims[2])x$(cg_dims[3])_win_$(win_dims[1])x$(win_dims[2])x$(win_dims[3])_iter$(iter_idx).gif", fps = 1)
-	
+        p_loc_max = plot(plot_list...) 
+	#end every 1 
+	#gif(anim, "$(img_path)/loc_max_$(file_name)_cg_$(cg_dims[1])x$(cg_dims[2])x$(cg_dims[3])_win_$(win_dims[1])x$(win_dims[2])x$(win_dims[3])_iter$(iter_idx).gif", fps = 1)
 end
+
+# ╔═╡ d1111152-bcef-4787-9ac8-4b783bc19aa6
+	savefig(p_loc_max, "$(img_path)/loc_max_$(file_name)_cg_$(cg_dims[1])x$(cg_dims[2])x$(cg_dims[3])_win_$(win_dims[1])x$(win_dims[2])x$(win_dims[3])_iter$(iter_idx).svg")
+
+# ╔═╡ ac929d60-741d-4611-9535-873bf12c4b68
+function lload_intdict_surroundings(path2dict::String, surr_dims::Tuple{Integer, Integer, Integer})
+	str_dict = JSON.parsefile(path2dict)
+	# loops through the key=>value pairs, parses the keys, assigns the values to the tuples
+	print(size(str_dict["0"][1][1][1][1]))
+	
+	dict_surr = Dict(parse(Int, k) => (UInt.(reshape(v[1], surr_dims)), v[2]) for (k, v) in str_dict)
+	return dict_surr
+end #EOF
 
 # ╔═╡ d7228c76-3653-477e-9f5f-78daeed3faf8
 begin
 	extension_surr = 2
 	surr_dims = win_dims .+ extension_surr*2
-    surr_path = "$(counts_path)/template_matching_$(file_name)/template_matching_ext_$(extension_surr)_$(file_name).json"
-	surr_dict = load_dict_surroundings(surr_path, surr_dims)
+    surr_path = "$(counts_path)/template_matching_$(file_name)/template_matching_ext_$(extension_surr)_$(file_name)_iter1.json"
+	surr_dict = lload_intdict_surroundings(surr_path, surr_dims)
 	surr_list = []
 	# loads iteration one for which we did the template matching
 	loc_max_iter1_path = "$(loc_max_path)/loc_max_$(file_name)_iter1.json"
-	loc_max_dict_iter1 = json2dict(loc_max_iter1_path)
+	loc_max_dict_iter1 = json2intdict(loc_max_iter1_path)
 	sorted_loc_max_iter1 = sort(collect(loc_max_dict_iter1), by = x -> x[2], rev = true)
 	for (key, _) in sorted_loc_max_iter1[start_at:start_at+top_n-1]
 		surr_patch = Gray.(surr_dict[key][1]./surr_dict[key][2])
@@ -124,37 +159,42 @@ begin
 	end # for key in keys(loc_max_dict)
 end
 
-# ╔═╡ eeb857c1-ed7c-4b57-8144-d4e85720a327
-md"## loc max hamming distance 1"
-
 # ╔═╡ 9aa557c0-6ca8-43e8-9dc6-bfca1add7fed
 begin
 	theme(:default)
     default(background_color=:lightgray) 
-	anim_tm = @animate for frame_idx in 1 : surr_dims[3]
             global plot_surr_list = [plot(
-            heatmap(el[:, :, frame_idx], color=:grays, axis=false, grid=false),  # Base heatmap
+            heatmap(el[:, :, 3], color=:grays, axis=false, grid=false),  # Base heatmap
             ) for el in surr_list]  # Enumerate for titles
-            plot(plot_surr_list...)  # Adjust layout as needed
-	end every 1 fps=2
-	gif(anim_tm, "$(img_path)/tm_$(file_name)_cg_$(cg_dims[1])x$(cg_dims[2])x$(cg_dims[3])_win_$(win_dims[1])x$(win_dims[2])x$(win_dims[3]).gif", fps = 2)
+            tm_plot = plot(plot_surr_list...)  # Adjust layout as needed
+	#gif(anim_tm, "$(img_path)/tm_$(file_name)_cg_$(cg_dims[1])x$(cg_dims[2])x$(cg_dims[3])_win_$(win_dims[1])x$(win_dims[2])x$(win_dims[3]).gif", fps = 2)
 end
+
+# ╔═╡ 5becffe0-7506-4ba0-98b5-48fd39e4b92d
+	savefig(tm_plot, "$(img_path)/tm_$(file_name)_cg_$(cg_dims[1])x$(cg_dims[2])x$(cg_dims[3])_win_$(win_dims[1])x$(win_dims[2])x$(win_dims[3])_iter$(iter_idx).svg")
 
 # ╔═╡ 3df52c1e-cd9b-4077-92b5-32e38b02df43
 begin
     loc_max_ham_iter_path = "$(loc_max_ham_path)/loc_max_ham_$(ham_dist)_$(file_name)_iter$(iter_idx).json"
-    loc_max_ham_dict = json2dict(loc_max_ham_iter_path)
+    loc_max_ham_dict = json2intdict(loc_max_ham_iter_path)
 	sorted_loc_max_ham = sort(collect(loc_max_ham_dict), by = x -> x[2], rev = true)
 end
+
+# ╔═╡ cbcd3b86-78c2-455c-9d9c-0b269f024b1b
+@bind sstart_at Slider(1:length(sorted_loc_max_ham), show_value=true, default=1)
 
 # ╔═╡ edc2f21b-ba35-419c-971e-1cb0a5a4feaf
 begin
 loc_max_ham_list = []
-    for (win_h, _) in sorted_loc_max_ham #[start_at:start_at+top_n-1]
-		target_win_h = reshape(BitVector(win_h), win_dims)
+    for (win_h, _) in sorted_loc_max_ham[sstart_at:sstart_at+top_n-1]
+		target_win_h = int2win(win_h, win_dims)
 		push!(loc_max_ham_list, Gray.(target_win_h))
 	end # for key in keys(loc_max_dict)
 end
+
+
+# ╔═╡ 49c62c28-c111-4f18-94b4-75a34290cc63
+length(loc_max_ham_list)
 
 # ╔═╡ 98111faa-f3e5-4659-a81e-304b906a651f
 md"## loc max hamming distance = $ham_dist"
@@ -179,14 +219,14 @@ end
 # ╔═╡ 0eabd6ab-2ea1-4835-9070-2abf3b298866
 begin
 	loc_max_ham_iter1_path = "$(loc_max_ham_path)/loc_max_ham_$(ham_dist)_$(file_name)_iter1.json"
-loc_max_ham_dict_iter1 = json2dict(loc_max_ham_iter1_path)
+loc_max_ham_dict_iter1 = json2intdict(loc_max_ham_iter1_path)
 	sorted_loc_max_ham_iter1 = sort(collect(loc_max_ham_dict_iter1), by = x -> x[2], rev = true)
 end
 
 # ╔═╡ f4acde1b-25da-4d4e-ad83-4a70c5dbca39
 begin
 	surr_list_h=[]
-for (key_h, _) in sorted_loc_max_ham_iter1 #[start_at:start_at+top_n-1]
+for (key_h, _) in sorted_loc_max_ham_iter1[start_at:start_at+top_n-1]
 		surr_patch_h = Gray.(surr_dict[key_h][1]./surr_dict[key_h][2])
 		push!(surr_list_h, surr_patch_h)
 	end # for key in keys(loc_max_dict)
@@ -239,7 +279,7 @@ my_yellow_red_gradient = reverse(cgrad([
 ], [0.0, 0.2, 0.6, 1.0]))  # control the position of colors
 	hm = heatmap(div_mat, color = reverse(my_yellow_red_gradient), clim = (0-.01, maximum(div_mat)+.3), yflip = true, title="$(file_name) cg $(cg_dims[1]) $(cg_dims[2]) $(cg_dims[3]), win $(win_dims[1]) $(win_dims[2]) $(win_dims[3])", legend=false, ytick=(1:5, 0:4), xticks=(1:5, 0:4), background_color=:white)
 	for i in 1:size(div_mat, 1), j in 1:size(div_mat, 2)
-		annotate!(i, j, text(round(div_mat[i, j]; digits = 3), 8, :black))
+		annotate!(j, i, text(round(div_mat[i, j]; digits = 3), 8, :black))
 	end
 	hm
 	
@@ -253,22 +293,29 @@ savefig(hm, "$(img_path)/$(file_name)_cg_$(cg_dims[1])x$(cg_dims[2])x$(cg_dims[3
 # ╠═b055baa2-336a-465e-8599-af42ace47998
 # ╠═aa232ab8-4b24-45a7-89f0-7e07c6219c45
 # ╠═fb35c107-89f6-4567-9df6-cb8a6d9e75e5
-# ╠═b128117d-a7c4-4fe5-a49e-56098e6bd042
-# ╟─3ea45e23-3379-44af-9d9a-337dd76df947
-# ╟─b0e9b208-0f99-458a-8462-44ad580c6d7a
-# ╟─e38daff8-18ee-42f3-950b-edb3614366e2
-# ╟─7150ef72-c1db-4294-b87a-ab6e46888362
-# ╟─d1bd8aab-9f32-4523-8bd3-e2e27e692b8b
-# ╟─4cbc0676-e105-43a7-bc8d-0e1fa937978a
+# ╠═e4cf5473-5fec-4bdb-8bc1-fd1953615965
+# ╠═01cd98b5-8b79-417c-9cb5-bb500b590f03
+# ╠═3ea45e23-3379-44af-9d9a-337dd76df947
+# ╠═b0e9b208-0f99-458a-8462-44ad580c6d7a
+# ╠═7150ef72-c1db-4294-b87a-ab6e46888362
+# ╠═d1bd8aab-9f32-4523-8bd3-e2e27e692b8b
 # ╠═bf8ca8bf-4b66-4e16-a50d-598f54c7f5f6
+# ╠═b36b6cdb-794d-4305-8054-07cc0a7c5d1c
+# ╟─f439e04e-14d9-49e2-bcae-75d7be06f01c
+# ╠═cd18bd81-bcfe-4951-81f1-a963accc2307
+# ╟─d462f6ca-cb07-499f-9d08-c03e962ad715
 # ╠═dbb9eb85-f94a-4d4a-856d-8c2231acf0f5
 # ╟─c977519c-504a-4e39-8a8d-3879f03b88b0
 # ╠═930fdd0b-aa1c-45fc-a7cf-938bc452fd43
+# ╠═d1111152-bcef-4787-9ac8-4b783bc19aa6
 # ╠═d7228c76-3653-477e-9f5f-78daeed3faf8
-# ╠═eeb857c1-ed7c-4b57-8144-d4e85720a327
+# ╠═ac929d60-741d-4611-9535-873bf12c4b68
 # ╠═9aa557c0-6ca8-43e8-9dc6-bfca1add7fed
+# ╠═5becffe0-7506-4ba0-98b5-48fd39e4b92d
 # ╠═3df52c1e-cd9b-4077-92b5-32e38b02df43
+# ╠═cbcd3b86-78c2-455c-9d9c-0b269f024b1b
 # ╠═edc2f21b-ba35-419c-971e-1cb0a5a4feaf
+# ╠═49c62c28-c111-4f18-94b4-75a34290cc63
 # ╟─98111faa-f3e5-4659-a81e-304b906a651f
 # ╠═0ceffe95-d4ec-4421-8f7d-ebedd6181477
 # ╠═0eabd6ab-2ea1-4835-9070-2abf3b298866

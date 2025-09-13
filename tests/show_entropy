@@ -1,0 +1,52 @@
+### A Pluto.jl notebook ###
+# v0.20.6
+
+using Markdown
+using InteractiveUtils
+
+# ╔═╡ 3f9237ee-90aa-11f0-1151-b330a8872109
+begin
+using Pkg
+cd("/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/SIP_package/SIP_dev/")
+Pkg.activate(".")
+end
+
+# ╔═╡ aec2a296-65b6-48b0-ab42-2e6e025d59de
+begin
+    using SIP_package
+	using PlutoUI
+	using Plots
+	using DelimitedFiles
+	using Statistics
+end
+
+# ╔═╡ 92c9427c-28c0-4ff4-ab16-bc0e9e537b61
+begin
+results_path = "/Users/tizianocausin/OneDrive - SISSA/data_repo/SIP_results"
+fig_path = "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/figures_SIP/"
+end
+
+# ╔═╡ c1217227-2abf-4fc5-94cc-31b3bb5880e1
+begin
+cg_dims = (3, 3, 3)
+win_dims = (4, 4, 2)
+file_names = ["oregon", "bryce_canyon", "snow_walk", "idaho", "cenote_caves", "hawaii", "emerald_lake"]
+avg_jsd_mat, std_jsd_mat = get_avg_mat(results_path, cg_dims, win_dims)
+#print(avg_sh_ent)
+h = plot_jsd_mat(avg_jsd_mat; std_mat = std_jsd_mat)
+#plot(avg_sh_ent, ribbon=std_sh_ent, marker=:circle, markerstrokewidth=0)
+end
+
+# ╔═╡ 6d5cbd54-7e43-4830-b6b2-bcf865c675ba
+
+
+# ╔═╡ 9159d918-09ac-4537-ae0e-9fd3feac19b3
+
+
+# ╔═╡ Cell order:
+# ╠═3f9237ee-90aa-11f0-1151-b330a8872109
+# ╠═aec2a296-65b6-48b0-ab42-2e6e025d59de
+# ╠═92c9427c-28c0-4ff4-ab16-bc0e9e537b61
+# ╠═c1217227-2abf-4fc5-94cc-31b3bb5880e1
+# ╠═6d5cbd54-7e43-4830-b6b2-bcf865c675ba
+# ╠═9159d918-09ac-4537-ae0e-9fd3feac19b3

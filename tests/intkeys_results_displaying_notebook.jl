@@ -36,9 +36,9 @@ end
 begin
     results_path = "/Users/tizianocausin/OneDrive - SISSA/data_repo/SIP_results"
 	img_path = "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/figures_SIP"
-	file_name = "bryce_canyon"
-	cg_dims = (3,3,3)
-	win_dims = (4,4,2)
+	file_name = "oregon"
+	cg_dims = (3,3,1)
+	win_dims = (3,3,1)
 	iterations_num = 5
 end
 
@@ -63,8 +63,8 @@ end # EOF
 
 # ╔═╡ 01cd98b5-8b79-417c-9cb5-bb500b590f03
 begin
-	ham_dist = 2
-	percentile = 40
+	ham_dist = 1
+	percentile = 100
 	loc_max_ham_path =  "$(counts_path)/loc_max_ham_$(ham_dist)_$(file_name)_$(percentile)percent"
 end
 
@@ -76,9 +76,6 @@ md"## iteration number"
 
 # ╔═╡ e38daff8-18ee-42f3-950b-edb3614366e2
 md"## print top loc max"
-
-# ╔═╡ 7150ef72-c1db-4294-b87a-ab6e46888362
-@bind top_n Slider(1:60, show_value=true, default=1) 
 
 # ╔═╡ d1bd8aab-9f32-4523-8bd3-e2e27e692b8b
 md"## start at"
@@ -92,6 +89,20 @@ d = json2intdict(counts_dict_path)
 end
   ╠═╡ =#
 
+# ╔═╡ 46d1f143-55a2-4d67-ac4e-25a0c9dbfa7e
+#=╠═╡
+begin
+key_list = []
+	sorted_keys = sort(collect(d), by = x -> x[2], rev = true)
+    for (key, _) in sorted_keys[start_at:start_at+top_n-1]
+		target_win = int2win(key, win_dims)
+		print(target_win)
+		push!(key_list, Gray.(target_win))
+	end # for key in keys(loc_max_dict)
+end
+
+  ╠═╡ =#
+
 # ╔═╡ 103d4d30-4cc1-4efa-8e43-b9f3fd59c1ca
 function isstatic(win)
 	if all(win[:,:,1]==win[:,:,2]) & all(win[:,:,1]==win[:,:,3])
@@ -101,6 +112,28 @@ function isstatic(win)
 	end
 
 end #EOF
+
+# ╔═╡ 16ccffee-bcf4-404b-8aee-8a2b4eb88df5
+#=╠═╡
+print(typeof(sorted_keys[1].second))
+  ╠═╡ =#
+
+# ╔═╡ c83adfee-f82e-42ff-9665-a2306d2adb41
+# ╠═╡ disabled = true
+#=╠═╡
+begin
+count_s=0
+count =0
+for key in keys(loc_max_dict)
+	if isstatic(int2win(key, (3,3,3)))
+		count_s +=1
+	end
+	count += 1
+
+end	# for key in keys(d)
+	print(count_s/count)
+end
+  ╠═╡ =#
 
 # ╔═╡ 344381e8-b921-40a7-a8af-a362bb6024fb
 # ╠═╡ disabled = true
@@ -127,47 +160,8 @@ begin
 	sorted_loc_max = sort(collect(loc_max_dict), by = x -> x[2], rev = true)
 end
 
-# ╔═╡ 4cbc0676-e105-43a7-bc8d-0e1fa937978a
-@bind start_at Slider(1:length(loc_max_dict)-top_n, show_value=true, default=1) 
+# ╔═╡ bb90abdf-0ee8-42b4-b21b-d2c05b5df47e
 
-# ╔═╡ 46d1f143-55a2-4d67-ac4e-25a0c9dbfa7e
-#=╠═╡
-begin
-key_list = []
-	sorted_keys = sort(collect(d), by = x -> x[2], rev = true)
-    for (key, _) in sorted_keys[start_at:start_at+top_n-1]
-		target_win = int2win(key, win_dims)
-		print(target_win)
-		push!(key_list, Gray.(target_win))
-	end # for key in keys(loc_max_dict)
-end
-
-  ╠═╡ =#
-
-# ╔═╡ 16ccffee-bcf4-404b-8aee-8a2b4eb88df5
-#=╠═╡
-print(typeof(sorted_keys[1].second))
-  ╠═╡ =#
-
-# ╔═╡ c83adfee-f82e-42ff-9665-a2306d2adb41
-# ╠═╡ disabled = true
-#=╠═╡
-begin
-count_s=0
-count =0
-for key in keys(loc_max_dict)
-	if isstatic(int2win(key, (3,3,3)))
-		count_s +=1
-	end
-	count += 1
-
-end	# for key in keys(d)
-	print(count_s/count)
-end
-  ╠═╡ =#
-
-# ╔═╡ f439e04e-14d9-49e2-bcae-75d7be06f01c
-loc_max_iter_path
 
 # ╔═╡ dbb9eb85-f94a-4d4a-856d-8c2231acf0f5
 begin
@@ -246,10 +240,16 @@ begin
 	sorted_loc_max_ham = sort(collect(loc_max_ham_dict), by = x -> x[2], rev = true)
 end
 
+# ╔═╡ 5becffe0-7506-4ba0-98b5-48fd39e4b92d
+loc_max_ham_iter_path
+
+# ╔═╡ cbcd3b86-78c2-455c-9d9c-0b269f024b1b
+@bind sstart_at Slider(1:length(sorted_loc_max_ham), show_value=true, default=1)
+
 # ╔═╡ edc2f21b-ba35-419c-971e-1cb0a5a4feaf
 begin
 loc_max_ham_list = []
-    for (win_h, _) in sorted_loc_max_ham[start_at:start_at+top_n-1]
+    for (win_h, _) in sorted_loc_max_ham[sstart_at:sstart_at+top_n-1]
 		target_win_h = int2win(win_h, win_dims)
 		push!(loc_max_ham_list, Gray.(target_win_h))
 	end # for key in keys(loc_max_dict)
@@ -339,7 +339,7 @@ my_yellow_red_gradient = reverse(cgrad([
 ], [0.0, 0.2, 0.6, 1.0]))  # control the position of colors
 	hm = heatmap(div_mat, color = reverse(my_yellow_red_gradient), clim = (0-.01, maximum(div_mat)+.3), yflip = true, title="$(file_name) cg $(cg_dims[1]) $(cg_dims[2]) $(cg_dims[3]), win $(win_dims[1]) $(win_dims[2]) $(win_dims[3])", legend=false, ytick=(1:5, 0:4), xticks=(1:5, 0:4), background_color=:white)
 	for i in 1:size(div_mat, 1), j in 1:size(div_mat, 2)
-		annotate!(i, j, text(round(div_mat[i, j]; digits = 3), 8, :black))
+		annotate!(j, i, text(round(div_mat[i, j]; digits = 3), 8, :black))
 	end
 	hm
 	
@@ -348,6 +348,24 @@ end
 # ╔═╡ 1876f661-39e3-4988-8651-5e168c3f4b69
 savefig(hm, "$(img_path)/$(file_name)_cg_$(cg_dims[1])x$(cg_dims[2])x$(cg_dims[3])_win_$(win_dims[1])x$(win_dims[2])x$(win_dims[3]).svg")
 
+# ╔═╡ 4cbc0676-e105-43a7-bc8d-0e1fa937978a
+# ╠═╡ disabled = true
+#=╠═╡
+@bind start_at Slider(1:length(loc_max_dict)-top_n, show_value=true, default=1) 
+  ╠═╡ =#
+
+# ╔═╡ d462f6ca-cb07-499f-9d08-c03e962ad715
+@bind start_at Slider(1:max(length(loc_max_dict)-top_n, 1), show_value=true, default=1) 
+
+# ╔═╡ 7150ef72-c1db-4294-b87a-ab6e46888362
+# ╠═╡ disabled = true
+#=╠═╡
+@bind top_n Slider(1:60, show_value=true, default=1) 
+  ╠═╡ =#
+
+# ╔═╡ f439e04e-14d9-49e2-bcae-75d7be06f01c
+@bind top_n Slider(1:min(60, length(loc_max_dict)), show_value=true, default=1) 
+
 # ╔═╡ Cell order:
 # ╠═a01b91a6-f395-11ef-3f4e-d13822cb03c3
 # ╠═b055baa2-336a-465e-8599-af42ace47998
@@ -355,12 +373,12 @@ savefig(hm, "$(img_path)/$(file_name)_cg_$(cg_dims[1])x$(cg_dims[2])x$(cg_dims[3
 # ╠═fb35c107-89f6-4567-9df6-cb8a6d9e75e5
 # ╠═e4cf5473-5fec-4bdb-8bc1-fd1953615965
 # ╠═01cd98b5-8b79-417c-9cb5-bb500b590f03
-# ╟─3ea45e23-3379-44af-9d9a-337dd76df947
-# ╟─b0e9b208-0f99-458a-8462-44ad580c6d7a
-# ╟─e38daff8-18ee-42f3-950b-edb3614366e2
-# ╟─7150ef72-c1db-4294-b87a-ab6e46888362
-# ╟─d1bd8aab-9f32-4523-8bd3-e2e27e692b8b
-# ╟─4cbc0676-e105-43a7-bc8d-0e1fa937978a
+# ╠═3ea45e23-3379-44af-9d9a-337dd76df947
+# ╠═b0e9b208-0f99-458a-8462-44ad580c6d7a
+# ╠═e38daff8-18ee-42f3-950b-edb3614366e2
+# ╠═7150ef72-c1db-4294-b87a-ab6e46888362
+# ╠═d1bd8aab-9f32-4523-8bd3-e2e27e692b8b
+# ╠═4cbc0676-e105-43a7-bc8d-0e1fa937978a
 # ╠═f40ff0a6-a84c-4728-891b-070ee1daa872
 # ╠═46d1f143-55a2-4d67-ac4e-25a0c9dbfa7e
 # ╠═103d4d30-4cc1-4efa-8e43-b9f3fd59c1ca
@@ -368,7 +386,9 @@ savefig(hm, "$(img_path)/$(file_name)_cg_$(cg_dims[1])x$(cg_dims[2])x$(cg_dims[3
 # ╠═c83adfee-f82e-42ff-9665-a2306d2adb41
 # ╠═344381e8-b921-40a7-a8af-a362bb6024fb
 # ╠═bf8ca8bf-4b66-4e16-a50d-598f54c7f5f6
+# ╠═bb90abdf-0ee8-42b4-b21b-d2c05b5df47e
 # ╠═f439e04e-14d9-49e2-bcae-75d7be06f01c
+# ╠═d462f6ca-cb07-499f-9d08-c03e962ad715
 # ╠═dbb9eb85-f94a-4d4a-856d-8c2231acf0f5
 # ╟─c977519c-504a-4e39-8a8d-3879f03b88b0
 # ╠═930fdd0b-aa1c-45fc-a7cf-938bc452fd43
@@ -376,7 +396,9 @@ savefig(hm, "$(img_path)/$(file_name)_cg_$(cg_dims[1])x$(cg_dims[2])x$(cg_dims[3
 # ╠═ac929d60-741d-4611-9535-873bf12c4b68
 # ╠═9aa557c0-6ca8-43e8-9dc6-bfca1add7fed
 # ╟─55292a20-d785-4dc4-800b-0a4260e38ffe
+# ╠═5becffe0-7506-4ba0-98b5-48fd39e4b92d
 # ╠═3df52c1e-cd9b-4077-92b5-32e38b02df43
+# ╠═cbcd3b86-78c2-455c-9d9c-0b269f024b1b
 # ╠═edc2f21b-ba35-419c-971e-1cb0a5a4feaf
 # ╠═49c62c28-c111-4f18-94b4-75a34290cc63
 # ╟─98111faa-f3e5-4659-a81e-304b906a651f

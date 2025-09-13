@@ -105,6 +105,36 @@ plot_jsd_mat(avg_repl; std_mat = std_repl)
 avg_repl, std_repl = get_avg_mat(results_path, (9, 9, 3), (3, 3, 3))
 plot_jsd_mat(avg_repl; std_mat = std_repl, square_size = 400, fontsize = 4)
 
+## SHANNON ENTROPY TO SEE HOW ON AVERAGE THE CG OVER SPACE
+cg3s = [1, 3, 5, 7, 9]
+all_counter = 0
+all_means = []
+all_stds = []
+for cg3 in cg3s
+	all_counter += 1
+	diags = zeros(3, 7)
+	counter = 0
+	avg = 0
+	counter_avg = 0
+	all_means_within = []
+	all_stds_within = []
+	for fn in file_names
+		counter += 1
+		file_path = "$(results_path)/$(fn)_counts_cg_$(cg3)x$(cg3)x3_win_$(win_dims[1])x$(win_dims[2])x$(win_dims[3])/sh_ent_$(fn).csv"
+		sh_ent_vec = readdlm(file_path, ',')
+		mask = sh_ent_vec .== 0
+		sh_ent_vec[mask] .= NaN
+		push!(all_means_within, mean(filter(!isnan, sh_ent_vec)))
+	end
+	print(all_means_within)
+	push!(all_stds, std(all_means_within))
+	push!(all_means, mean(all_means_within))
+	# avg_diags = mean(diags, dims = 2)
+	# std_diags = std(diags, dims = 2)
+	# all_means[:, all_counter] = avg_diags
+	# all_std[:, all_counter] = std_diags
+end
+plot(cg3s, all_means, yerror = all_stds, seriestype = :scatter, markersize = 4, xlabel = "cg step (frames)", ylabel = "average sh entropy")
 
 ## TO SEE HOW ON AVERAGE THE CG OVER SPACE IS STRONG
 cg3s = [1, 3, 5, 7, 9]
@@ -144,7 +174,9 @@ for cg3 in cg3s
 	# all_std[:, all_counter] = std_diags
 end
 
-plot(cg3s, all_means, yerror = all_stds, seriestype = :scatter, markersize = 4)
+plot(cg3s, all_means, yerror = all_stds, seriestype = :scatter, markersize = 4, xlabel = "cg step (pixels)", ylabel = "average jsd")
+
+
 
 ## PROGRESSION CG IN SPACE OVER ALL THE DIAGONALS
 # fn = file_names[1] 
@@ -178,6 +210,37 @@ plot!(cg3s, all_means[:, 2], yerror = all_std[:, 2], seriestype = :scatter, labe
 plot!(cg3s, all_means[:, 3], yerror = all_std[:, 3], seriestype = :scatter, label = "cg step = $(cg3s[3])")
 plot!(cg3s, all_means[:, 4], yerror = all_std[:, 4], seriestype = :scatter, label = "cg step = $(cg3s[4])")
 plot!(cg3s, all_means[:, 5], yerror = all_std[:, 5], seriestype = :scatter, label = "cg step = $(cg3s[4])")
+
+## SHANNON ENTROPY TO SEE HOW ON AVERAGE THE CG OVER TIME IS WEAKER
+cg3s = [1, 3, 5, 7, 9]
+all_counter = 0
+all_means = []
+all_stds = []
+for cg3 in cg3s
+	all_counter += 1
+	diags = zeros(3, 7)
+	counter = 0
+	avg = 0
+	counter_avg = 0
+	all_means_within = []
+	all_stds_within = []
+	for fn in file_names
+		counter += 1
+		file_path = "$(results_path)/$(fn)_counts_cg_$(cg_dims[1])x$(cg_dims[2])x$(cg3)_win_$(win_dims[1])x$(win_dims[2])x$(win_dims[3])/sh_ent_$(fn).csv"
+		sh_ent_vec = readdlm(file_path, ',')
+		mask = sh_ent_vec .== 0
+		sh_ent_vec[mask] .= NaN
+		push!(all_means_within, mean(filter(!isnan, sh_ent_vec)))
+	end
+	print(all_means_within)
+	push!(all_stds, std(all_means_within))
+	push!(all_means, mean(all_means_within))
+	# avg_diags = mean(diags, dims = 2)
+	# std_diags = std(diags, dims = 2)
+	# all_means[:, all_counter] = avg_diags
+	# all_std[:, all_counter] = std_diags
+end
+plot(cg3s, all_means, yerror = all_stds, seriestype = :scatter, markersize = 4, xlabel = "cg step (frames)", ylabel = "average sh entropy")
 
 
 
@@ -218,7 +281,7 @@ for cg3 in cg3s
 	# all_means[:, all_counter] = avg_diags
 	# all_std[:, all_counter] = std_diags
 end
-plot(cg3s, all_means, yerror = all_stds, seriestype = :scatter, markersize = 4)
+plot(cg3s, all_means, yerror = all_stds, seriestype = :scatter, markersize = 4, xlabel = "cg step (frames)", ylabel = "average jsd")
 
 ## PROGRESSION CG IN SPACE OVER ALL THE DIAGONALS
 cg3s = [1, 3, 5, 7, 9]
