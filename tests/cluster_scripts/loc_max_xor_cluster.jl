@@ -41,7 +41,7 @@ for iter_idx in 1:num_of_iterations
 	if rank == root
 		@info "iter $(iter_idx) has a dict with $(length(myDict)) keys"
 	end
-	percentile = 10
+	percentile = 100
 	top_counts = get_top_windows(myDict, percentile)
 	tot_counts = length(top_counts)
 	jump = cld(tot_counts, nproc - 1) # performs a ceiling division to equally divide the number of windows among the processes, if we overshoot (because the ceiling approximation surpasses the total number of windows), the processor just skips the for loop inside parallel_get_loc_max

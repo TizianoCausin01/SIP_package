@@ -9,5 +9,5 @@ scrambling_cond=${8} # either local or block
 # args 9, 10 are range and stride if local scrambling and arg 9 is scale if block
 read -a files <<< "$1"    # reads the first argin and creates an array called files
 for fn in "${files[@]}"; do
-    sbatch --job-name=${fn}_cg_${2}x${3}x${4}_win_${5}x${6}x${7}_jsd_${8} ./jsd_scrambling_general.sh $fn $cg1 $cg2 $cg3 $win1 $win2 $win3 ${8} ${9} ${10}
+    sbatch --job-name=${fn}_cg_${2}x${3}x${4}_win_${5}x${6}x${7}_sh_ent_${8} ./sh_ent_scrambling_general.sh $fn $cg1 $cg2 $cg3 $win1 $win2 $win3 ${8} ${9} ${10}
 done

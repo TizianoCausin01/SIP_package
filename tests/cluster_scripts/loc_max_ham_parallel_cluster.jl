@@ -29,7 +29,7 @@ glider_coarse_g_dim = Tuple(parse(Int, ARGS[i]) for i in 2:4)
 glider_dim = Tuple(parse(Int, ARGS[i]) for i in 5:7)
 ham_dist = parse(Int, ARGS[8])
 results_path = "/leonardo_work/Sis25_piasini/tcausin/SIP_results/$(file_name)_counts_cg_$(glider_coarse_g_dim[1])x$(glider_coarse_g_dim[2])x$(glider_coarse_g_dim[3])_win_$(glider_dim[1])x$(glider_dim[2])x$(glider_dim[3])"
-percentile = 40
+percentile = 100
 loc_max_path = "$(results_path)/loc_max_ham_$(ham_dist)_$(file_name)_$(percentile)percent"
 
 for iter_idx in 1:num_of_iterations

@@ -185,7 +185,7 @@ elseif in(rank, mergers) # I am merger
 		if src_worker == -1 # end signal from master_merger
 			global stop = true
 		else
-			length_mex = MPI.Recv(Int32, comm; source=src_worker, tag=64)
+			length_mex = MPI.Recv(UInt32, comm; source=src_worker, tag=64)
 			if @isdefined dict_buffer
 				# we recycle the memory allotted to dict_buffer from one iteration to the next
 				resize!(dict_buffer, length_mex)
@@ -213,13 +213,13 @@ elseif in(rank, mergers) # I am merger
 		end # if ismessage
 	end # while stop == 0
 
-	#if (@isdefined tot_dicts) && tot_dicts !== nothing # checkpoints
-	#	for iter_idx in 1:num_of_iterations
-	#		open("$(results_folder)/counts_$(name_vid)_iter$(iter_idx)_rank$(rank).json", "w") do file # the folder has to be already present 
-	#			JSON.print(file, tot_dicts[iter_idx])
-	#		end # open counts
-	#	end # for iter_idx in 1:num_of_iterations
-	# end # if isdefined(Main, :tot_dicts)
+	if (@isdefined tot_dicts) && tot_dicts !== nothing # checkpoints
+		for iter_idx in 1:num_of_iterations
+			open("$(results_folder)/counts_$(name_vid)_iter$(iter_idx)_rank$(rank).json", "w") do file # the folder has to be already present 
+				JSON.print(file, tot_dicts[iter_idx])
+			end # open counts
+		end # for iter_idx in 1:num_of_iterations
+	 end # if isdefined(Main, :tot_dicts)
 
 	mergers_convergence(rank, mergers, tot_dicts, num_of_iterations, results_folder, name_vid, comm)
 
@@ -239,7 +239,7 @@ else # I am worker
 			current_dict = wrapper_sampling_parallel(joinpath(split_folder, files_names[current_data]), num_of_iterations, glider_coarse_g_dim, glider_dim)
 			current_dict = MPI.serialize(current_dict)
 			#current_dict = transcode(ZlibCompressor, current_dict)
-			length_dict = Int32(length(current_dict))
+			length_dict = UInt32(length(current_dict))
 			MPI.Send(Int32(current_data), comm; dest=master_merger, tag=100) # sends request to master_merger
                         target_merger = MPI.Recv(Int32, comm; source=master_merger, tag=100)
 			MPI.Send(length_dict, comm; dest=target_merger, tag=64) # sends length of dict to merger for preallocation but with another tag (on another frequency)
