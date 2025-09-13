@@ -175,15 +175,16 @@ function split_vid(path2data::String, file_name::String, segment_duration::Int)
 		/leonardo/home/userexternal/tcausin0/bin/ffmpeg
 		-i $original_data
 	-an
-	-c:v libx264
-		-preset fast
-		-flush_packets 1
+	-c:v copy
 	-f segment
 	-segment_time $segment_duration
+	-force_key_frames "expr:gte(t,n_forced*$segment_duration)"
 	-reset_timestamps 1
 	$split_files
 `
 	run(cmd) # runs the command
+#		-preset fast
+#		-flush_packets 1
 end # EOF
 
 
@@ -1456,7 +1457,7 @@ function mergers_convergence(rank, mergers_arr, my_dict, num_of_iterations, resu
 					new_dict = MPI.deserialize(new_dict)
 					merge_vec_dicts(my_dict, new_dict, num_of_iterations)
 					new_dict = nothing
-					#GC.gc()
+					GC.gc()
 					@info "$(Dates.format(now(), "HH:MM:SS")) rank $(rank): merged with dict from rank $(levels[lev][idx_src])"
 				end # if proc + 1 <= length(mergers) 
 			else
@@ -1469,7 +1470,7 @@ function mergers_convergence(rank, mergers_arr, my_dict, num_of_iterations, resu
 				#MPI.Send(my_dict, comm; dest = levels[lev][idx_dst], tag = lev)
 				send_large_data(my_dict, levels[lev][idx_dst], lev, comm)
 				my_dict = nothing
-				#GC.gc()
+				GC.gc()
 				@info "$(Dates.format(now(), "HH:MM:SS")) proc $(rank) after converging: free memory $(Sys.free_memory()/1024^3)"
 			end # if in(rank, lev)
 		end # if in(rank, levels[lev])
@@ -1600,6 +1601,8 @@ function send_large_data(data, dst, tag, comm)
 		chunk = data[onsets[ichunk]+1:onsets[ichunk+1]]
 		count += 1
 		status = MPI.send(chunk, dst, tag + count, comm)
+		chunk = nothing
+                GC.gc()
 	end # for ichunk in 1:length(onsets)-1
 end #EOF
 
