@@ -107,6 +107,22 @@ begin
 	
 end
 
+# ╔═╡ 801636a0-aeaa-4b01-8c8f-e94414ec5db8
+begin
+	theme(:default)
+    default(background_color=:lightgray) 
+	for i in 1:win_dims[3]
+            global pplot_list = [plot(
+            heatmap(el[:, :, i], color=:grays, axis=false, grid=false),  # Base heatmap
+            ) for el in loc_max_list]  # Enumerate for titles
+		title_plot = plot(title="Overall Title", grid=false, showaxis=false, framestyle=:none)
+            pp = plot(pplot_list...)  # Adjust layout as needed
+	savefig(pp, "$(img_path)/top1000_frame_$(i)loc_max_$(file_name)_cg_$(cg_dims[1])x$(cg_dims[2])x$(cg_dims[3])_win_$(win_dims[1])x$(win_dims[2])x$(win_dims[3])_iter$(iter_idx).svg")
+	end
+	#gif(anim, "$(img_path)/loc_max_$(file_name)_cg_$(cg_dims[1])x$(cg_dims[2])x$(cg_dims[3])_win_$(win_dims[1])x$(win_dims[2])x$(win_dims[3])_iter$(iter_idx).gif", fps = 1)
+	
+end
+
 # ╔═╡ d7228c76-3653-477e-9f5f-78daeed3faf8
 begin
 	extension_surr = 2
@@ -140,6 +156,19 @@ begin
 	gif(anim_tm, "$(img_path)/tm_$(file_name)_cg_$(cg_dims[1])x$(cg_dims[2])x$(cg_dims[3])_win_$(win_dims[1])x$(win_dims[2])x$(win_dims[3]).gif", fps = 2)
 end
 
+# ╔═╡ f53d10d9-eeef-48a8-ba70-4c8e5fdcf305
+begin
+	theme(:default)
+    default(background_color=:lightgray) 
+	for i in 1:(win_dims[3]+ 2*2)
+            global plot_surr_listt = [plot(
+            heatmap(el[:, :, i], color=:grays, axis=false, grid=false),  # Base heatmap
+            ) for el in surr_list]  # Enumerate for titles
+            p = plot(plot_surr_listt...)  # Adjust layout as needed
+	savefig(p, "$(img_path)/top1000_frame_$(i)tm_$(file_name)_cg_$(cg_dims[1])x$(cg_dims[2])x$(cg_dims[3])_win_$(win_dims[1])x$(win_dims[2])x$(win_dims[3]).svg")
+	end
+end
+
 # ╔═╡ 3df52c1e-cd9b-4077-92b5-32e38b02df43
 begin
     loc_max_ham_iter_path = "$(loc_max_ham_path)/loc_max_ham_$(ham_dist)_$(file_name)_iter$(iter_idx).json"
@@ -160,8 +189,6 @@ end
 md"## loc max hamming distance = $ham_dist"
 
 # ╔═╡ 0ceffe95-d4ec-4421-8f7d-ebedd6181477
-# ╠═╡ disabled = true
-#=╠═╡
 begin
 	theme(:default)
     default(background_color=:lightgray) 
@@ -174,7 +201,20 @@ begin
 	end every 1 
 	gif(anim_h, "$(img_path)/loc_max_ham_$(ham_dist)_$(file_name)_cg_$(cg_dims[1])x$(cg_dims[2])x$(cg_dims[3])_win_$(win_dims[1])x$(win_dims[2])x$(win_dims[3])_iter$(iter_idx).gif", fps = 1)
 end
-  ╠═╡ =#
+
+# ╔═╡ 434e5f3c-58b2-4b79-8ac0-004dbe4219fe
+begin
+	theme(:default)
+    default(background_color=:lightgray) 
+	for frame_idx_h in 1 : win_dims[3]
+            global pplot_ham_list = [plot(
+            heatmap(el_h[:, :, frame_idx_h], color=:grays, axis=false, grid=false),  # Base heatmap
+            ) for el_h in loc_max_ham_list]  # Enumerate for titles
+		title_plot = plot(title="Overall Title", grid=false, showaxis=false, framestyle=:none)
+            ppp = plot(pplot_ham_list...)  # Adjust layout as needed
+	savefig(ppp, "$(img_path)/ham_frame_$(frame_idx_h)_loc_max_ham_$(ham_dist)_$(file_name)_cg_$(cg_dims[1])x$(cg_dims[2])x$(cg_dims[3])_win_$(win_dims[1])x$(win_dims[2])x$(win_dims[3])_iter$(iter_idx).svg")
+	end 
+end
 
 # ╔═╡ 0eabd6ab-2ea1-4835-9070-2abf3b298866
 begin
@@ -203,6 +243,30 @@ begin
             plot(plot_surr_list_h...)  # Adjust layout as needed
 	end every 1 fps=2
 	gif(anim_tm_h, "$(img_path)/tm_$(file_name)_ham_$(ham_dist)_cg_$(cg_dims[1])x$(cg_dims[2])x$(cg_dims[3])_win_$(win_dims[1])x$(win_dims[2])x$(win_dims[3]).gif", fps = 2)
+end
+
+# ╔═╡ 0d996df4-c63c-478b-87db-732826802b43
+begin
+	theme(:default)
+    default(background_color=:lightgray) 
+	for frame_idx in 1 : surr_dims[3]
+            global pplot_surr_list_h = [plot(
+            heatmap(el[:, :, frame_idx], color=:grays, axis=false, grid=false),  # Base heatmap
+            ) for el in surr_list_h]  # Enumerate for titles
+            a = plot(pplot_surr_list_h...)  # Adjust layout as needed
+  savefig(a, "$(img_path)/ham2_frame_$(frame_idx)_tm_$(file_name)_ham_$(ham_dist)_cg_$(cg_dims[1])x$(cg_dims[2])x$(cg_dims[3])_win_$(win_dims[1])x$(win_dims[2])x$(win_dims[3]).svg")
+	end 
+	
+end
+
+# ╔═╡ 8806991b-f4b0-49b5-a093-8267e815ea05
+begin
+            global plot_surr_list_hh = [plot(
+            heatmap(el[:, :, 4], color=:grays, axis=false, grid=false),  # Base heatmap
+            ) for el in surr_list_h]  # Enumerate for titles
+            p = plot(plot_surr_list_hh...)  # Adjust layout as needed
+	
+	savefig(p, "$(img_path)/tm_$(file_name)_ham_$(ham_dist)_cg_$(cg_dims[1])x$(cg_dims[2])x$(cg_dims[3])_win_$(win_dims[1])x$(win_dims[2])x$(win_dims[3]).svg")
 end
 
 # ╔═╡ ba2f06ad-6ca9-4822-8c85-f6c481d50708
@@ -264,16 +328,21 @@ savefig(hm, "$(img_path)/$(file_name)_cg_$(cg_dims[1])x$(cg_dims[2])x$(cg_dims[3
 # ╠═dbb9eb85-f94a-4d4a-856d-8c2231acf0f5
 # ╟─c977519c-504a-4e39-8a8d-3879f03b88b0
 # ╠═930fdd0b-aa1c-45fc-a7cf-938bc452fd43
+# ╠═801636a0-aeaa-4b01-8c8f-e94414ec5db8
 # ╠═d7228c76-3653-477e-9f5f-78daeed3faf8
 # ╠═eeb857c1-ed7c-4b57-8144-d4e85720a327
 # ╠═9aa557c0-6ca8-43e8-9dc6-bfca1add7fed
+# ╠═f53d10d9-eeef-48a8-ba70-4c8e5fdcf305
 # ╠═3df52c1e-cd9b-4077-92b5-32e38b02df43
 # ╠═edc2f21b-ba35-419c-971e-1cb0a5a4feaf
 # ╟─98111faa-f3e5-4659-a81e-304b906a651f
 # ╠═0ceffe95-d4ec-4421-8f7d-ebedd6181477
+# ╠═434e5f3c-58b2-4b79-8ac0-004dbe4219fe
 # ╠═0eabd6ab-2ea1-4835-9070-2abf3b298866
 # ╠═f4acde1b-25da-4d4e-ad83-4a70c5dbca39
 # ╠═b6f7e723-20aa-4c88-aea5-f11c7a49127c
+# ╠═0d996df4-c63c-478b-87db-732826802b43
+# ╠═8806991b-f4b0-49b5-a093-8267e815ea05
 # ╟─ba2f06ad-6ca9-4822-8c85-f6c481d50708
 # ╠═8c84beb4-84ef-4664-8e88-2c58fb454842
 # ╟─bba7aa34-15fd-484b-b070-6fa228e6218b

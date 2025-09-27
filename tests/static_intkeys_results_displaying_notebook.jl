@@ -39,7 +39,7 @@ begin
 	img_path = "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/figures_SIP"
 	file_name = "snow_walk"
 	cg_dims = (3,3,1)
-	win_dims = (3,3,1)
+	win_dims = (4,4,1)
 	iterations_num = 5
 end
 

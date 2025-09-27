@@ -46,7 +46,8 @@ export wrapper_sampling,
         local_scrambling,
         block_scrambling,
     plot_jsd_mat,
-    get_avg_mat
+    get_avg_mat,
+    get_avg_sh_ent
 # =========================
 # IMPORTED PACKAGES
 # =========================
@@ -1849,7 +1850,7 @@ function get_avg_mat(results_path, cg_dims, win_dims; file_names = 0, scrambling
 	if file_names == 0
 		file_names = ["oregon", "bryce_canyon", "snow_walk", "idaho", "cenote_caves", "hawaii", "emerald_lake"]
 	end #if file_names==0 
-	tot_jsds = Array{Float64}(undef, 5, 5, 7)
+    tot_jsds = Array{Float64}(undef, 5, 5, length(file_names))
 	counter = 0
 	if scrambling_condition != Nothing
 		results_path = "$(results_path)/$(scrambling_condition)_scrambling"
@@ -1867,7 +1868,33 @@ function get_avg_mat(results_path, cg_dims, win_dims; file_names = 0, scrambling
 		tot_jsds[:, :, counter] = jsd_mat
 	end
 	avg_tot = dropdims(mean(tot_jsds, dims = 3), dims = 3);
-	std_tot = dropdims(std(tot_jsds, dims = 3), dims = 3);
+	std_tot = dropdims(std(tot_jsds, dims = 3)./sqrt(length(file_names)), dims = 3);
+	return avg_tot, std_tot
+end
+
+function get_avg_sh_ent(results_path, cg_dims, win_dims; file_names = 0, scrambling_condition = Nothing, range = Nothing, stride = Nothing, scale = Nothing)
+	if file_names == 0
+		file_names = ["oregon", "bryce_canyon", "snow_walk", "idaho", "cenote_caves", "hawaii", "emerald_lake"]
+	end #if file_names==0 
+    tot_sh_ents = Array{Float64}(undef, 5, length(file_names))
+	counter = 0
+	if scrambling_condition != Nothing
+		results_path = "$(results_path)/$(scrambling_condition)_scrambling"
+	end
+	for fn in file_names
+		counter += 1
+		if scrambling_condition == Nothing
+			file_path = "$(results_path)/$(fn)_counts_cg_$(cg_dims[1])x$(cg_dims[2])x$(cg_dims[3])_win_$(win_dims[1])x$(win_dims[2])x$(win_dims[3])/sh_ent_$(fn).csv"
+		elseif scrambling_condition == "local"
+			file_path = "$(results_path)/$(fn)_counts_cg_$(cg_dims[1])x$(cg_dims[2])x$(cg_dims[3])_win_$(win_dims[1])x$(win_dims[2])x$(win_dims[3])_range_$(range)_stride_$(stride)/sh_ent_$(fn).csv"
+		elseif scrambling_condition == "block"
+			file_path = "$(results_path)/$(fn)_counts_cg_$(cg_dims[1])x$(cg_dims[2])x$(cg_dims[3])_win_$(win_dims[1])x$(win_dims[2])x$(win_dims[3])_scale_$(scale)/sh_ent_$(fn).csv"
+		end #if scrambling_condition == Nothing
+		sh_ent_vec = readdlm(file_path, ',')
+		tot_sh_ents[:, counter] = sh_ent_vec
+	end
+	avg_tot = dropdims(mean(tot_sh_ents, dims = 2), dims = 2);
+	std_tot = dropdims(std(tot_sh_ents, dims = 2)./sqrt(length(file_names)), dims = 2);
 	return avg_tot, std_tot
 end
 end # module SIP_package
